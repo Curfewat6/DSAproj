@@ -51,11 +51,11 @@ def find_best_match_address(query):
     print("No matches.")
     return None
 
-query = "138683"
-best_match_result = find_best_match_address(query)
+def addr2coord(address):
+    match_result = find_best_match_address(address)
+    if match_result:
+        return (match_result['LATITUDE'], match_result['LONGITUDE'])
+    else:
+        return (0, 0)
 
-if best_match_result:
-    #print(f"Best Match: {best_match_result}")
-    print(f"Coords: {float(best_match_result['LATITUDE']):.4f}, {float(best_match_result['LONGITUDE']):.4f}")
-else:
-    print("No suitable match found")
+

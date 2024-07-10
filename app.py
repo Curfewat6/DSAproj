@@ -5,6 +5,7 @@ import folium
 import requests
 from flask import Flask, jsonify, render_template
 from itertools import permutations
+import location
 
 app = Flask(__name__)
 
@@ -123,12 +124,13 @@ def determine_traffic_factor(traffic_data):
         print(f"Error in determining traffic factor: {e}")
         return 1.0  # Default to normal traffic factor if any error occurs
 
-# Input coordinates (latitude, longitude)
-start_coords = (1.3321, 103.8934)  # [Ubi Challenger warehouse]
+# Input coordinates (latitude, longitude) - modified by joel, use the 
+
+start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destination_coords = [
-    (1.2936, 103.8319),     # GWC [Furthest]
-    (1.3507, 103.8488),     # ION orchard [middle]
-    (1.3002, 103.8552)      # Bishan [closest]
+    location.addr2coord("great world city"),     # GWC [Furthest]
+    location.addr2coord("ion orchard"),     # ION orchard [middle]
+    location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
 
 # Find the nearest nodes in the graph to the given coordinates
