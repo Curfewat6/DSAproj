@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Routing with Live Traffic</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Dynamic Routing with Live Traffic</h1>
+    <div id="map" style="height: 600px; width: 100%;"></div>
+    <button id="update-route">Update Route</button>
+    <p id="route-info"></p>
+    <script>
+        var map = L.map('map').setView([1.3321, 103.8934], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add markers for start and destinations
+        var start_coords = {{ start_coords|tojson }};
+        var destination_coords = {{ destination_coords|tojson }};
+        
+        L.marker([start_coords[0], start_coords[1]], {color: 'green'}).bindPopup("Start").addTo(map);
+        destination_coords.forEach(function(coords, index) {
+            L.marker([coords[0], coords[1]], {color: 'red'}).bindPopup("Destination " + (index + 1)).addTo(map);
+        });
+
+        $('#update-route').click(function() {
+            $.get('/update_route', function(data) {
+                data.route_data.forEach(function(segment) {
+                    var latlngs = segment.coords.map(function(coord) {
+                        return [coord[0], coord[1]];
+                    });
+                    L.polyline(latlngs, { color: segment.color, weight: 5, opacity: 0.8 }).addTo(map);
+                });
+                $('#route-info').text(`Total Distance: ${data.total_distance.toFixed(2)} km, Total Time: ${data.total_time.toFixed(2)} minutes`);
+            });
+        });
+    </script>
+</body>
+</html>
