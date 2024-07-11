@@ -134,7 +134,9 @@ destination_coords = [
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-dij.main(start_coords,destination_coords)
+order = dij.main(start_coords,destination_coords)
+print ("Order of delivery is: ",order)
+print("Order  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 
 # # Find the nearest nodes in the graph to the given coordinates
 # start_node = get_nearest_node(G, start_coords)

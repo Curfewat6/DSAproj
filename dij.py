@@ -141,8 +141,7 @@ def main(start_coords,destination_coords):
     
 
     print("All end nodes have been visited")
-    print ("Order of delivery is: ",order)
-    print("Order  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
+    
     return order
 if __name__ == "__main__":
     main()
