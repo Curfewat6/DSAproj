@@ -5,8 +5,8 @@ import folium
 import requests
 from flask import Flask, jsonify, render_template
 from itertools import permutations
-import location
 import dij
+import location
 
 app = Flask(__name__)
 
@@ -126,20 +126,29 @@ def determine_traffic_factor(traffic_data):
         print(f"Error in determining traffic factor: {e}")
         return 1.0  # Default to normal traffic factor if any error occurs
 
-# Input coordinates (latitude, longitude) - modified by joel, use the 
-
-start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
-destination_coords = [
+# Input coordinates (latitude, longitude)
+# start_coords = (1.3321, 103.8934)  # [Ubi Challenger warehouse]
+# destination_coords = [
+#     (1.2936, 103.8319),     # GWC [Furthest]
+#     (1.3507, 103.8488),     # ION orchard [middle]
+#     (1.3002, 103.8552)      # Bishan [closest]
+# ]
+# print(start_coords)
+# print(type(start_coords))
+# print(destination_coords)
+# print(type(destination_coords))
+start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
+destinations = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-order_from_dij = dij.main(start_coords,destination_coords)
+order_from_dij = dij.main(start_coords,destinations)
 print ("Order of delivery is: ",order_from_dij)
-print("Order  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
-
+print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 # Find the nearest nodes in the graph to the given coordinates
 start_node = get_nearest_node(G, start_coords)
+destination_coords = [(coord[2], coord[3]) for coord in order_from_dij]
 destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
 # Function to calculate the total path distance for a given order of nodes
@@ -159,16 +168,9 @@ def calculate_total_distance(order):
         current_node = node
     return total_distance, total_time
 
-# Function to find the optimal order of visiting nodes using all permutations
+# Function to find the optimal order of visiting nodes (modified to visit in specified order)
 def find_optimal_order(start, destinations):
-    min_distance = float('inf')
-    optimal_order = None
-    for perm in permutations(destinations):
-        distance, _ = calculate_total_distance(perm)
-        if distance < min_distance:
-            min_distance = distance
-            optimal_order = perm
-    return optimal_order
+    return destinations
 
 @app.route('/')
 def index():

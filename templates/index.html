@@ -19,13 +19,31 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
+        // Define custom icons for the markers
+        var greenIcon = new L.Icon({
+            iconUrl: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
+        var redIcon = new L.Icon({
+            iconUrl: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
         // Add markers for start and destinations
         var start_coords = {{ start_coords|tojson }};
         var destination_coords = {{ destination_coords|tojson }};
         
-        L.marker([start_coords[0], start_coords[1]], {color: 'green'}).bindPopup("Start").addTo(map);
+        console.log("Start coordinates:", start_coords);
+        console.log("Destination coordinates:", destination_coords);
+
+        L.marker([start_coords[0], start_coords[1]], {icon: greenIcon}).bindPopup("Start").addTo(map);
         destination_coords.forEach(function(coords, index) {
-            L.marker([coords[0], coords[1]], {color: 'red'}).bindPopup("Destination " + (index + 1)).addTo(map);
+            L.marker([coords[0], coords[1]], {icon: redIcon}).bindPopup("Destination " + (index + 1)).addTo(map);
         });
 
         $('#update-route').click(function() {

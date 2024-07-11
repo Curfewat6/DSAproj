@@ -126,7 +126,7 @@ def main(start_coords,destination_coords):
 
     #Step3 Convert coordinates to nodes in osmnx
     ox.nearest_nodes
-    start_node = ox.distance.nearest_nodes(graph, start_coords[0][1], start_coords[0][0])
+    start_node = ox.distance.nearest_nodes(graph, start_coords[1], start_coords[0])
     end_nodes = []
     for end_location in destination_coords:
         end_nodes.append(ox.distance.nearest_nodes(graph, end_location[1], end_location[0]))  
