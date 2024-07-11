@@ -6,6 +6,7 @@ import requests
 from flask import Flask, jsonify, render_template
 from itertools import permutations
 import location
+import dij
 
 app = Flask(__name__)
 
@@ -92,6 +93,7 @@ def update_edge_weights(graph, traffic_data):
 
             start_coords = (start_lat, start_lon)
             end_coords = (end_lat, end_lon)
+            
             start_node = get_nearest_node(graph, start_coords)
             end_node = get_nearest_node(graph, end_coords)
             speed_band = float(segment['SpeedBand'])  # Convert speed band to float
@@ -126,16 +128,17 @@ def determine_traffic_factor(traffic_data):
 
 # Input coordinates (latitude, longitude) - modified by joel, use the 
 
-start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
+start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
 destination_coords = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
+dij.main(start_coords,destination_coords)
 
-# Find the nearest nodes in the graph to the given coordinates
-start_node = get_nearest_node(G, start_coords)
-destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+# # Find the nearest nodes in the graph to the given coordinates
+# start_node = get_nearest_node(G, start_coords)
+# destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
 # Function to calculate the total path distance for a given order of nodes
 def calculate_total_distance(order):

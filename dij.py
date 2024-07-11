@@ -93,7 +93,7 @@ def extract_path(edgeTo, start_node, end_node):
     return path
         
         
-def main():
+def main(start_coords,destination_coords):
     
     #To this order to be passed to A* example will be 
     #declare global order tuple
@@ -107,13 +107,13 @@ def main():
         print("Failed to download the graph. Exiting...")
         return
     
-    ###INTEGRATE with location.py
-    start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
-    destination_coords = [
-    location.addr2coord("great world city"),     # GWC [Furthest]
-    location.addr2coord("ion orchard"),     # ION orchard [middle]
-    location.addr2coord("bishan mrt")      # Bishan [closest]
-    ]
+    # ###INTEGRATE with location.py
+    # start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
+    # destination_coords = [
+    # location.addr2coord("great world city"),     # GWC [Furthest]
+    # location.addr2coord("ion orchard"),     # ION orchard [middle]
+    # location.addr2coord("bishan mrt")      # Bishan [closest]
+    # ]
     
     # #Step2 Get locations
     # start_location = [
