@@ -136,7 +136,7 @@ destination_coords = [
 ]
 order_from_dij = dij.main(start_coords,destination_coords)
 print ("Order of delivery is: ",order_from_dij)
-print("Order  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
+print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 
 # Find the nearest nodes in the graph to the given coordinates
 start_node = get_nearest_node(G, start_coords)
