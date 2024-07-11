@@ -134,13 +134,13 @@ destination_coords = [
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-order = dij.main(start_coords,destination_coords)
-print ("Order of delivery is: ",order)
+order_from_dij = dij.main(start_coords,destination_coords)
+print ("Order of delivery is: ",order_from_dij)
 print("Order  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 
-# # Find the nearest nodes in the graph to the given coordinates
-# start_node = get_nearest_node(G, start_coords)
-# destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+# Find the nearest nodes in the graph to the given coordinates
+start_node = get_nearest_node(G, start_coords)
+destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
 # Function to calculate the total path distance for a given order of nodes
 def calculate_total_distance(order):
