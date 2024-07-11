@@ -128,7 +128,7 @@ def determine_traffic_factor(traffic_data):
 
 # Input coordinates (latitude, longitude) - modified by joel, use the 
 
-start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
+start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destination_coords = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]

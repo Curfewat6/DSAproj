@@ -57,7 +57,7 @@ def dij(graph, start_node, end_nodes):
             # start_coords = (graph.nodes[start_node]['y'], graph.nodes[start_node]['x'])
             # end_coords = (graph.nodes[current_node]['y'], graph.nodes[current_node]['x'])
             # print(start_node,current_node)
-            order.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
+            order_dij.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
             
             return edgeTo, distTo, current_node
 
@@ -97,8 +97,8 @@ def main(start_coords,destination_coords):
     
     #To this order to be passed to A* example will be 
     #declare global order tuple
-    global order
-    order = []
+    global order_dij
+    order_dij = []
 
 
     #Step1 Get graph
@@ -126,7 +126,7 @@ def main(start_coords,destination_coords):
 
     #Step3 Convert coordinates to nodes in osmnx
     ox.nearest_nodes
-    start_node = ox.distance.nearest_nodes(graph, start_coords[0][1], start_coords[0][0])
+    start_node = ox.distance.nearest_nodes(graph, start_coords[1], start_coords[0])
     end_nodes = []
     for end_location in destination_coords:
         end_nodes.append(ox.distance.nearest_nodes(graph, end_location[1], end_location[0]))  
@@ -142,6 +142,6 @@ def main(start_coords,destination_coords):
 
     print("All end nodes have been visited")
     
-    return order
+    return order_dij
 if __name__ == "__main__":
     main()
