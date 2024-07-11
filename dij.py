@@ -57,7 +57,7 @@ def dij(graph, start_node, end_nodes):
             # start_coords = (graph.nodes[start_node]['y'], graph.nodes[start_node]['x'])
             # end_coords = (graph.nodes[current_node]['y'], graph.nodes[current_node]['x'])
             # print(start_node,current_node)
-            order.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
+            order_dij.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
             
             return edgeTo, distTo, current_node
 
@@ -97,8 +97,8 @@ def main(start_coords,destination_coords):
     
     #To this order to be passed to A* example will be 
     #declare global order tuple
-    global order
-    order = []
+    global order_dij
+    order_dij = []
 
 
     #Step1 Get graph
@@ -142,6 +142,6 @@ def main(start_coords,destination_coords):
 
     print("All end nodes have been visited")
     
-    return order
+    return order_dij
 if __name__ == "__main__":
     main()
