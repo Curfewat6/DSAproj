@@ -119,7 +119,7 @@ destinations = [
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-order_from_dij = dij.main(start_coords, destinations)
+order_from_dij = dij.main(start_coords, destinations,G)
 print("Order of delivery is: ", order_from_dij)
 print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 

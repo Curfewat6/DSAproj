@@ -93,19 +93,19 @@ def extract_path(edgeTo, start_node, end_node):
     return path
         
         
-def main(start_coords,destination_coords):
+def main(start_coords,destination_coords,G):
     
     #To this order to be passed to A* example will be 
     #declare global order tuple
     global order_dij
     order_dij = []
 
-
-    #Step1 Get graph
-    graph = downloadOSMX()
-    if graph == None:
-        print("Failed to download the graph. Exiting...")
-        return
+    graph = G
+    # #Step1 Get graph
+    # graph = downloadOSMX()
+    # if graph == None:
+    #     print("Failed to download the graph. Exiting...")
+    #     return
     
     # ###INTEGRATE with location.py
     # start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
