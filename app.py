@@ -9,7 +9,9 @@ import location
 app = Flask(__name__)
 
 # Load the graph from OpenStreetMap
-G = ox.graph_from_place('Singapore', network_type='drive')
+graph_name = "singapore.graphml"
+G = ox.load_graphml(graph_name)
+#G = ox.graph_from_place('Singapore', network_type='drive')
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
