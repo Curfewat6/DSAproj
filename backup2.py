@@ -1,8 +1,8 @@
+from flask import Flask, jsonify, render_template
 import heapq
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
-from flask import Flask, jsonify, render_template
 import dij
 import location
 
@@ -171,13 +171,14 @@ def update_route():
             total_time += segment_time
 
     # Prepare the data to send back
-    new_route_data = []
+    route_data = []
     for segment in route_segments:
         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
         speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
-        new_route_data.append({'coords': segment_coords, 'color': 'green'})
+        color = 'green' if speed_band >= 5 else 'yellow' if speed_band >= 3 else 'red'
+        route_data.append({'coords': segment_coords, 'color': color})
 
-    return jsonify(new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+    return jsonify(new_route_data=route_data, total_distance=total_distance, total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)
