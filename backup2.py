@@ -24,7 +24,7 @@ def heuristic(node1, node2, graph):
     return h
 
 # Custom A* search algorithm with traffic-aware cost calculation
-def a_star_search(graph, start, goal, avoid_edges=set()):
+def a_star_search(graph, start, goal):
     pq = [(0, start, [])]  # Priority queue as (cost, current_node, path)
     costs = {start: 0}
     visited = set()
@@ -42,7 +42,7 @@ def a_star_search(graph, start, goal, avoid_edges=set()):
         visited.add(current)
         
         for neighbor in graph.neighbors(current):
-            if neighbor in visited or (current, neighbor) in avoid_edges or (neighbor, current) in avoid_edges:
+            if neighbor in visited:
                 continue
             
             edge_data = graph[current][neighbor][0]
@@ -102,15 +102,6 @@ def update_edge_weights(graph, traffic_data):
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
 
-# Function to simulate high traffic between Ubi and Bishan
-def simulate_high_traffic(graph, start_coords, end_coords):
-    start_node = get_nearest_node(graph, start_coords)
-    end_node = get_nearest_node(graph, end_coords)
-    for u, v, key, data in graph.edges(keys=True, data=True):
-        if (u == start_node and v == end_node) or (u == end_node and v == start_node):
-            data['speed_band'] = 1  # Simulate heavy traffic
-            data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
-
 # Input coordinates (latitude, longitude)
 start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destinations = [
@@ -118,7 +109,7 @@ destinations = [
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-order_from_dij = dij.main(start_coords, destinations, G)
+order_from_dij = dij.main(start_coords, destinations,G)
 print("Order of delivery is: ", order_from_dij)
 print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 
@@ -158,25 +149,6 @@ def update_route():
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
 
-    # Calculate the original route from Ubi to Bishan
-    bishan_coords = location.addr2coord("bishan mrt")
-    bishan_node = get_nearest_node(G, bishan_coords)
-    original_segment = a_star_search(G, start_node, bishan_node)
-    original_route_data = []
-    avoid_edges = set()
-
-    if original_segment and len(original_segment) > 1:
-        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
-        original_route_data.append({'coords': segment_coords, 'color': 'red'})
-
-        # Add edges to the avoid set
-        for i in range(len(original_segment) - 1):
-            avoid_edges.add((original_segment[i], original_segment[i + 1]))
-            avoid_edges.add((original_segment[i + 1], original_segment[i]))
-
-    # Simulate high traffic between Ubi and Bishan
-    simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
-
     optimal_order = find_optimal_order(start_node, destination_nodes)
 
     route_nodes = [start_node]
@@ -185,7 +157,7 @@ def update_route():
     total_time = 0
 
     for i, dest_node in enumerate(optimal_order):
-        segment = a_star_search(G, route_nodes[-1], dest_node, avoid_edges)
+        segment = a_star_search(G, route_nodes[-1], dest_node)
         if segment and len(segment) > 1:
             route_segments.append(segment)
             route_nodes.extend(segment[1:])  # Avoid duplicating nodes
@@ -203,16 +175,9 @@ def update_route():
     for segment in route_segments:
         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
         speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
-        if speed_band >= 5:
-            color = 'green'
-        elif speed_band >= 3:
-            color = 'yellow'
-        else:
-            color = 'red'
-            
-        new_route_data.append({'coords': segment_coords, 'color': color})
+        new_route_data.append({'coords': segment_coords, 'color': 'green'})
 
-    return jsonify(original_route_data=original_route_data, new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+    return jsonify(new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)
