@@ -11,7 +11,6 @@ app = Flask(__name__)
 # Load the graph from OpenStreetMap
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
-#G = ox.graph_from_place('Singapore', network_type='drive')
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
@@ -103,15 +102,6 @@ def update_edge_weights(graph, traffic_data):
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
 
-# Function to simulate high traffic between Ubi and Bishan
-def simulate_high_traffic(graph, start_coords, end_coords):
-    start_node = get_nearest_node(graph, start_coords)
-    end_node = get_nearest_node(graph, end_coords)
-    for u, v, key, data in graph.edges(keys=True, data=True):
-        if (u == start_node and v == end_node) or (u == end_node and v == start_node):
-            data['speed_band'] = 1  # Simulate heavy traffic
-            data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
-
 # Input coordinates (latitude, longitude)
 start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destinations = [
@@ -159,16 +149,6 @@ def update_route():
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
 
-    # Calculate the original route from Ubi to Bishan without high traffic simulation
-    original_segment = a_star_search(G, start_node, destination_nodes[-1])
-    original_route_data = []
-    if original_segment and len(original_segment) > 1:
-        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
-        original_route_data.append({'coords': segment_coords, 'color': 'red'})
-
-    # Simulate high traffic between Ubi and Bishan
-    simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
-
     optimal_order = find_optimal_order(start_node, destination_nodes)
 
     route_nodes = [start_node]
@@ -197,7 +177,7 @@ def update_route():
         speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
         new_route_data.append({'coords': segment_coords, 'color': 'green'})
 
-    return jsonify(original_route_data=original_route_data, new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+    return jsonify(new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)

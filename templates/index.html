@@ -55,14 +55,6 @@
                     }
                 });
 
-                // Add original route in red
-                data.original_route_data.forEach(function(segment) {
-                    var latlngs = segment.coords.map(function(coord) {
-                        return [coord[0], coord[1]];
-                    });
-                    L.polyline(latlngs, { color: 'red', weight: 5, opacity: 0.8 }).addTo(map);
-                });
-
                 // Add new route in green
                 data.new_route_data.forEach(function(segment) {
                     var latlngs = segment.coords.map(function(coord) {
