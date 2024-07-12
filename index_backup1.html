@@ -48,29 +48,12 @@
 
         $('#update-route').click(function() {
             $.get('/update_route', function(data) {
-                // Clear existing polylines
-                map.eachLayer(function(layer) {
-                    if (layer instanceof L.Polyline) {
-                        map.removeLayer(layer);
-                    }
-                });
-
-                // Add original route in red
-                data.original_route_data.forEach(function(segment) {
+                data.route_data.forEach(function(segment) {
                     var latlngs = segment.coords.map(function(coord) {
                         return [coord[0], coord[1]];
                     });
-                    L.polyline(latlngs, { color: 'red', weight: 5, opacity: 0.8 }).addTo(map);
+                    L.polyline(latlngs, { color: segment.color, weight: 5, opacity: 0.8 }).addTo(map);
                 });
-
-                // Add new route in green
-                data.new_route_data.forEach(function(segment) {
-                    var latlngs = segment.coords.map(function(coord) {
-                        return [coord[0], coord[1]];
-                    });
-                    L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
-                });
-
                 $('#route-info').text(`Total Distance: ${data.total_distance.toFixed(2)} km, Total Time: ${data.total_time.toFixed(2)} minutes`);
             });
         });

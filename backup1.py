@@ -1,8 +1,10 @@
 import heapq
 import osmnx as ox
 from geopy.distance import geodesic
+import folium
 import requests
 from flask import Flask, jsonify, render_template
+from itertools import permutations
 import dij
 import location
 
@@ -45,7 +47,9 @@ def a_star_search(graph, start, goal):
                 continue
             
             edge_data = graph[current][neighbor][0]
-            travel_time = edge_data.get('travel_time', edge_data['length'] / 5)  # Default to speed 5 m/s if not set
+            speed_band = edge_data.get('speed_band', 5)
+            traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
+            travel_time = edge_data['length'] / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
             
             new_cost = costs[current] + travel_time
             if neighbor not in costs or new_cost < costs[neighbor]:
@@ -81,6 +85,7 @@ def fetch_traffic_flow_data(api_key):
 def update_edge_weights(graph, traffic_data):
     for segment in traffic_data.get('value', []):
         try:
+            # Convert coordinates to float
             start_lat = float(segment['StartLat'])
             start_lon = float(segment['StartLon'])
             end_lat = float(segment['EndLat'])
@@ -91,7 +96,7 @@ def update_edge_weights(graph, traffic_data):
             
             start_node = get_nearest_node(graph, start_coords)
             end_node = get_nearest_node(graph, end_coords)
-            speed_band = float(segment['SpeedBand'])
+            speed_band = float(segment['SpeedBand'])  # Convert speed band to float
 
             if start_node in graph and end_node in graph[start_node]:
                 length = graph[start_node][end_node][0]['length'] / 1000  # Convert to km
@@ -101,26 +106,46 @@ def update_edge_weights(graph, traffic_data):
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
 
-# Function to simulate high traffic between Ubi and Bishan
-def simulate_high_traffic(graph, start_coords, end_coords):
-    start_node = get_nearest_node(graph, start_coords)
-    end_node = get_nearest_node(graph, end_coords)
-    for u, v, key, data in graph.edges(keys=True, data=True):
-        if (u == start_node and v == end_node) or (u == end_node and v == start_node):
-            data['speed_band'] = 1  # Simulate heavy traffic
-            data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
+# Function to calculate fuel consumption in liters
+def calculate_fuel_consumption(distance_km, fuel_efficiency_l_per_100km, traffic_factor=1.0):
+    adjusted_fuel_efficiency = fuel_efficiency_l_per_100km * traffic_factor
+    fuel_consumption = (distance_km / 100) * adjusted_fuel_efficiency
+    return fuel_consumption
+
+# Function to determine traffic factor based on fetched traffic data
+def determine_traffic_factor(traffic_data):
+    try:
+        average_speed = sum(item['SpeedBand'] for item in traffic_data['value']) / len(traffic_data['value'])
+        if average_speed < 2:
+            return 1.5  # Heavy traffic
+        elif average_speed < 4:
+            return 1.2  # Moderate traffic
+        else:
+            return 1.0  # Normal traffic
+    except Exception as e:
+        print(f"Error in determining traffic factor: {e}")
+        return 1.0  # Default to normal traffic factor if any error occurs
 
 # Input coordinates (latitude, longitude)
+# start_coords = (1.3321, 103.8934)  # [Ubi Challenger warehouse]
+# destination_coords = [
+#     (1.2936, 103.8319),     # GWC [Furthest]
+#     (1.3507, 103.8488),     # ION orchard [middle]
+#     (1.3002, 103.8552)      # Bishan [closest]
+# ]
+# print(start_coords)
+# print(type(start_coords))
+# print(destination_coords)
+# print(type(destination_coords))
 start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destinations = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]
     location.addr2coord("bishan mrt")      # Bishan [closest]
 ]
-order_from_dij = dij.main(start_coords, destinations)
-print("Order of delivery is: ", order_from_dij)
+order_from_dij = dij.main(start_coords,destinations)
+print ("Order of delivery is: ",order_from_dij)
 print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
-
 # Find the nearest nodes in the graph to the given coordinates
 start_node = get_nearest_node(G, start_coords)
 destination_coords = [(coord[2], coord[3]) for coord in order_from_dij]
@@ -156,16 +181,7 @@ def update_route():
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
-
-    # Calculate the original route from Ubi to Bishan without high traffic simulation
-    original_segment = a_star_search(G, start_node, destination_nodes[-1])
-    original_route_data = []
-    if original_segment and len(original_segment) > 1:
-        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
-        original_route_data.append({'coords': segment_coords, 'color': 'red'})
-
-    # Simulate high traffic between Ubi and Bishan
-    simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
+    traffic_factor = determine_traffic_factor(traffic_data) if traffic_data else 1.0
 
     optimal_order = find_optimal_order(start_node, destination_nodes)
 
@@ -189,13 +205,14 @@ def update_route():
             total_time += segment_time
 
     # Prepare the data to send back
-    new_route_data = []
+    route_data = []
     for segment in route_segments:
         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
         speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
-        new_route_data.append({'coords': segment_coords, 'color': 'green'})
+        color = 'green' if speed_band >= 5 else 'yellow' if speed_band >= 3 else 'red'
+        route_data.append({'coords': segment_coords, 'color': color})
 
-    return jsonify(original_route_data=original_route_data, new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+    return jsonify(route_data=route_data, total_distance=total_distance, total_time=total_time)
 
 if __name__ == '__main__':
     app.run(debug=True)
