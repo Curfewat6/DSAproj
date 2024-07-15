@@ -101,6 +101,11 @@ def main(start_coords,destination_coords,G):
     order_dij = []
 
     graph = G
+
+    #check that all edgees have length >0
+    for edge in graph.edges:
+        if 'length' not in graph.edges[edge]:
+            print("there is edge weight less than 0, WARNING WILL IMPACT DIJ")       
     # #Step1 Get graph
     # graph = downloadOSMX()
     # if graph == None:
