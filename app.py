@@ -104,23 +104,25 @@ def update_edge_weights(graph, traffic_data):
 
 # Function to simulate high traffic between Ubi and Bishan
 def simulate_high_traffic(graph, start_coords, end_coords):
-    start_node = get_nearest_node(graph, start_coords)
-    end_node = get_nearest_node(graph, end_coords)
-    for u, v, key, data in graph.edges(keys=True, data=True):
+    graph_copy = graph.copy()
+    start_node = get_nearest_node(graph_copy, start_coords)
+    end_node = get_nearest_node(graph_copy, end_coords)
+    for u, v, key, data in graph_copy.edges(keys=True, data=True):
         if (u == start_node and v == end_node) or (u == end_node and v == start_node):
             data['speed_band'] = 1  # Simulate heavy traffic
             data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
+    return graph_copy
 
 # Input coordinates (latitude, longitude)
 start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
 destinations = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]
-    location.addr2coord("and mo kio hub")      # Bishan [closest]
+    location.addr2coord("ang mo kio hub")      # Ang Mo Kio Hub
 ]
+
 order_from_dij = dij.main(start_coords, destinations, G)
 print("Order of delivery is: ", order_from_dij)
-print("order_from_dij  = [(start_lat,start_long,end_lat,endlong),(start_lat,start_long,end_lat,endlong)]")
 
 # Find the nearest nodes in the graph to the given coordinates
 start_node = get_nearest_node(G, start_coords)
@@ -144,6 +146,21 @@ def calculate_total_distance(order):
         current_node = node
     return total_distance, total_time
 
+def get_nearest_neighbor_node(graph, node, exclude_node):
+    nearest_neighbor = None
+    min_distance = float('inf')
+
+    for neighbor in graph.neighbors(node):
+        if neighbor == exclude_node:
+            continue
+        distance = geodesic((graph.nodes[node]['y'], graph.nodes[node]['x']),
+                            (graph.nodes[neighbor]['y'], graph.nodes[neighbor]['x'])).meters
+        if distance < min_distance:
+            min_distance = distance
+            nearest_neighbor = neighbor
+
+    return nearest_neighbor
+
 # Function to find the optimal order of visiting nodes (modified to visit in specified order)
 def find_optimal_order(start, destinations):
     return destinations
@@ -158,10 +175,12 @@ def update_route():
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
 
-    # Calculate the original route from Ubi to Bishan
-    bishan_coords = location.addr2coord("ang mo kio hub")
-    bishan_node = get_nearest_node(G, bishan_coords)
-    original_segment = a_star_search(G, start_node, bishan_node)
+    # Calculate the original route from Ubi to Ang Mo Kio Hub
+    ang_mo_kio_coords = location.addr2coord("ang mo kio hub")
+    ang_mo_kio_node = get_nearest_node(G, ang_mo_kio_coords)
+    neighbor_node = get_nearest_neighbor_node(G, ang_mo_kio_node, exclude_node=None)
+
+    original_segment = a_star_search(G, start_node, ang_mo_kio_node)
     original_route_data = []
     avoid_edges = set()
 
@@ -174,8 +193,8 @@ def update_route():
             avoid_edges.add((original_segment[i], original_segment[i + 1]))
             avoid_edges.add((original_segment[i + 1], original_segment[i]))
 
-    # Simulate high traffic between Ubi and Bishan
-    simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
+    # Simulate high traffic using a copied graph
+    G_simulated = simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
 
     optimal_order = find_optimal_order(start_node, destination_nodes)
 
@@ -185,13 +204,16 @@ def update_route():
     total_time = 0
 
     for i, dest_node in enumerate(optimal_order):
-        segment = a_star_search(G, route_nodes[-1], dest_node, avoid_edges)
+        if dest_node == ang_mo_kio_node:
+            dest_node = neighbor_node  # Use the neighbor node instead
+
+        segment = a_star_search(G_simulated, route_nodes[-1], dest_node, avoid_edges)
         if segment and len(segment) > 1:
             route_segments.append(segment)
             route_nodes.extend(segment[1:])  # Avoid duplicating nodes
 
-            segment_distance = sum(G[segment[j]][segment[j + 1]][0]['length'] for j in range(len(segment) - 1)) / 1000  # Convert to km
-            speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
+            segment_distance = sum(G_simulated[segment[j]][segment[j + 1]][0]['length'] for j in range(len(segment) - 1)) / 1000  # Convert to km
+            speed_band = G_simulated[segment[0]][segment[1]][0].get('speed_band', 5)
             traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
             segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
 
@@ -201,8 +223,8 @@ def update_route():
     # Prepare the data to send back
     new_route_data = []
     for segment in route_segments:
-        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
-        speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
+        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in segment]
+        speed_band = G_simulated[segment[0]][segment[1]][0].get('speed_band', 5)
         if speed_band >= 5:
             color = 'green'
         elif speed_band >= 3:
