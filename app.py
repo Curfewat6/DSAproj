@@ -116,7 +116,7 @@ start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenge
 destinations = [
     location.addr2coord("great world city"),     # GWC [Furthest]
     location.addr2coord("ion orchard"),     # ION orchard [middle]
-    location.addr2coord("bishan mrt")      # Bishan [closest]
+    location.addr2coord("and mo kio hub")      # Bishan [closest]
 ]
 order_from_dij = dij.main(start_coords, destinations, G)
 print("Order of delivery is: ", order_from_dij)
@@ -159,7 +159,7 @@ def update_route():
     update_edge_weights(G, traffic_data)
 
     # Calculate the original route from Ubi to Bishan
-    bishan_coords = location.addr2coord("bishan mrt")
+    bishan_coords = location.addr2coord("ang mo kio hub")
     bishan_node = get_nearest_node(G, bishan_coords)
     original_segment = a_star_search(G, start_node, bishan_node)
     original_route_data = []
