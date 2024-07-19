@@ -98,9 +98,37 @@ def find_best_match_address(query):
     print("No matches.")
     return None
 
+# def addr2coord(address):
+#     match_result = find_best_match_address(address)
+#     if match_result:
+#         return (round(float(match_result['LATITUDE']), 4), round(float(match_result['LONGITUDE']), 4))
+#     else:
+#         return (0, 0)
+
+
 def addr2coord(address):
     match_result = find_best_match_address(address)
     if match_result:
-        return (round(float(match_result['LATITUDE']), 4), round(float(match_result['LONGITUDE']), 4))
+        return {
+            'address': match_result['ADDRESS'],
+            'coords': (round(float(match_result['LATITUDE']), 4), round(float(match_result['LONGITUDE']), 4)),
+            # 'confidence': match_result.get('confidence', 0)  # Add confidence if needed
+        }
     else:
-        return (0, 0)
+        return {
+            'address': address,
+            'coords': (0, 0),
+            # 'confidence': 0
+        }
+    
+def coord2addr(coord):
+    lat, lon = coord
+    url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data.get('display_name', 'Address not found')
+    return 'Address not found'
+
+    
+

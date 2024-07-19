@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Route Results</title>
+        <!-- Bootstrap CSS -->
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body {
+                padding: 20px;
+            }
+            .route-step {
+                margin-bottom: 20px;
+                padding: 20px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                background-color: #f9f9f9;
+            }
+            .route-step h5 {
+                margin-bottom: 10px;
+            }
+            .route-step p {
+                margin: 0;
+            }
+            .view-route-btn {
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Order of Delivery</h1>
+        <div class="list-group">
+            {% for item in ordered_data %}
+                <div class="route-step">
+                    <h5>Step {{ item.index }}</h5>
+                    <p><strong>From:</strong> {{ item.start_address }} ({{ item.start[0] }}, {{ item.start[1] }})</p>
+                    <p><strong>To:</strong> {{ item.end_address }} ({{ item.end[0] }}, {{ item.end[1] }})</p>
+                    <button class="btn btn-primary view-route-btn">View Route</button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

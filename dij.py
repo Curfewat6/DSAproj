@@ -27,7 +27,7 @@ def downloadOSMX():
 
     return graph
 
-def dij(graph, start_node, end_nodes):
+def nearest_neighbor(graph, start_node, end_nodes):
      # Initialize arrays
     distTo = {node: float('inf') for node in graph.nodes}
     edgeTo = {node: None for node in graph.nodes}
@@ -134,7 +134,7 @@ def main(start_coords,destination_coords,G):
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
-        edgeTo, distTo, current_node = dij(graph, start_node, end_nodes)
+        edgeTo, distTo, current_node = nearest_neighbor(graph, start_node, end_nodes)
         #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
         end_nodes.remove(current_node)

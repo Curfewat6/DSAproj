@@ -1,0 +1,63 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Destination Form</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function createDestinationInputs() {
+            const numDestinations = document.getElementById('numDestinations').value;
+            const destinationInputsDiv = document.getElementById('destinationInputs');
+            destinationInputsDiv.innerHTML = '';
+
+            for (let i = 0; i < numDestinations; i++) {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'form-group';
+                inputGroup.innerHTML = `
+                    <label for="destination${i}">Destination ${i + 1}:</label>
+                    <input type="text" class="form-control" id="destination${i}" name="destination${i}" required>
+                `;
+                destinationInputsDiv.appendChild(inputGroup);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Enter Your Route Information</h1>
+        <form action="/checkAddress" method="post">
+            <div class="form-group">
+                <label for="startLocation">Start Location:</label>
+                <input type="text" class="form-control" id="startLocation" name="startLocation" required>
+            </div>
+            <div class="form-group">
+                <label for="numDestinations">Number of Destinations:</label>
+                <select class="form-control" id="numDestinations" name="numDestinations" onchange="createDestinationInputs()" required>
+                    <option value="" disabled selected>Select number of destinations</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div id="destinationInputs"></div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+</body>
+</html>

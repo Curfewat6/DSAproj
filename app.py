@@ -2,7 +2,7 @@ import heapq
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request,redirect, url_for
 import dij
 import location
 
@@ -113,21 +113,21 @@ def simulate_high_traffic(graph, start_coords, end_coords):
             data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
     return graph_copy
 
-# Input coordinates (latitude, longitude)
-start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
-destinations = [
-    location.addr2coord("great world city"),     # GWC [Furthest]
-    location.addr2coord("ion orchard"),     # ION orchard [middle]
-    location.addr2coord("ang mo kio hub")      # Ang Mo Kio Hub
-]
+# # Input coordinates (latitude, longitude)
+# start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
+# destinations = [
+#     location.addr2coord("great world city"),     # GWC [Furthest]
+#     location.addr2coord("ion orchard"),     # ION orchard [middle]
+#     location.addr2coord("ang mo kio hub")      # Ang Mo Kio Hub
+# ]
 
-order_from_dij = dij.main(start_coords, destinations, G)
-print("Order of delivery is: ", order_from_dij)
+# order_from_dij = dij.main(start_coords, destinations, G)
+# print("Order of delivery is: ", order_from_dij)
 
-# Find the nearest nodes in the graph to the given coordinates
-start_node = get_nearest_node(G, start_coords)
-destination_coords = [(coord[2], coord[3]) for coord in order_from_dij]
-destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+# # Find the nearest nodes in the graph to the given coordinates
+# start_node = get_nearest_node(G, start_coords)
+# destination_coords = [(coord[2], coord[3]) for coord in order_from_dij]
+# destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
 # Function to calculate the total path distance for a given order of nodes
 def calculate_total_distance(order):
@@ -165,9 +165,81 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 def find_optimal_order(start, destinations):
     return destinations
 
+#Step 1 , user input form
 @app.route('/')
 def index():
-    return render_template('index.html', start_coords=start_coords, destination_coords=destination_coords)
+    return render_template('form.html')
+
+# @app.route('/')
+# def index():
+#     return render_template('index.html', start_coords=start_coords, destination_coords=destination_coords)
+
+#step 2, from user input form to this function , use location.py to check for the coordinates
+#results is shown in results.html
+@app.route('/checkAddress', methods=['POST'])
+def check_address():
+    start_location = request.form['startLocation']
+    num_destinations = int(request.form['numDestinations'])
+    
+    destinations = []
+    for i in range(num_destinations):   
+        destination = request.form[f'destination{i}']
+        destinations.append(destination)
+    
+    # Convert addresses to coordinates using location.py
+    start_data = location.addr2coord(start_location)
+    destination_data = [location.addr2coord(dest) for dest in destinations]
+    
+    # Now you have start_data and destination_data
+    # You can proceed with the rest of your logic here
+    
+    # You can redirect to another page or render a template with the results
+    return render_template('results.html', start_data=start_data, destination_data=destination_data)
+    
+
+#step 3, from result.html, user click generate will come to this function to user dij.py to generate the order
+#results is shown in results.html
+@app.route('/generate_order', methods=['POST'])
+def generate_order():
+    start_location = request.form['startLocation']
+    destinations = request.form.getlist('destinations')
+    
+    # Convert addresses to coordinates using location.py
+    start_data = location.addr2coord(start_location)
+    start_coords = start_data['coords']
+    destination_data = [location.addr2coord(dest) for dest in destinations]
+    destination_coords = [data['coords'] for data in destination_data]
+    
+    # Call the nearest neighbor function from dij.py
+    order_from_dij = dij.main(start_coords, destination_coords, G)
+    
+    print(order_from_dij)
+
+    # # Accessing individual elements in the first tuple
+    # print("First element of the first tuple:", order_from_dij[0][0])
+    # print("Second element of the first tuple:", order_from_dij[0][1])
+    # print("Third element of the first tuple:", order_from_dij[0][2])
+    # print("Fourth element of the first tuple:", order_from_dij[0][3])
+
+    # Prepare the data to be displayed in order.html
+    ordered_data = []
+    for i, coord in enumerate(order_from_dij):
+        start_coords = (coord[0], coord[1])
+        end_coords = (coord[2], coord[3])
+        start_address = location.coord2addr(start_coords)  # Get full address from coordinates
+        end_address = location.coord2addr(end_coords)  # Get full address from coordinates
+        ordered_data.append({
+            'start': start_coords,
+            'end': end_coords,
+            'start_address': start_address,
+            'end_address': end_address,
+            'index': i + 1
+        })
+    
+    return render_template('order.html', ordered_data=ordered_data)
+
+
+
 
 @app.route('/update_route')
 def update_route():

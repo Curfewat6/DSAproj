@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Results</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Route Results</h1>
+        <h2>Start Location</h2>
+        <p><strong>Address:</strong> {{ start_data.address }}</p>
+        <p><strong>Coordinates:</strong> {{ start_data.coords }}</p>
+        
+        <h2>Destinations</h2>
+        <ul>
+            {% for data in destination_data %}
+                <li>
+                    <p><strong>Address:</strong> {{ data.address }}</p>
+                    <p><strong>Coordinates:</strong> {{ data.coords }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+        
+        <form action="/generate_order" method="post">
+            <input type="hidden" name="startLocation" value="{{ start_data.address }}">
+            {% for data in destination_data %}
+                <input type="hidden" name="destinations" value="{{ data.address }}">
+            {% endfor %}
+            <button type="submit" class="btn btn-primary mt-3">Generate Order</button>
+        </form>
+        
+    </div>
+</body>
+</html>
