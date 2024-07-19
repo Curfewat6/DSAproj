@@ -122,7 +122,7 @@ def addr2coord(address):
         }
     
 def coord2addr(coord):
-    lat, lon = coord
+    lat, lon = map(float, coord)
     url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
     response = requests.get(url)
     if response.status_code == 200:
