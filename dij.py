@@ -27,7 +27,7 @@ def downloadOSMX():
 
     return graph
 
-def nearest_neighbor(graph, start_node, end_nodes):
+def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
      # Initialize arrays
     distTo = {node: float('inf') for node in graph.nodes}
     edgeTo = {node: None for node in graph.nodes}
@@ -87,13 +87,14 @@ def nearest_neighbor(graph, start_node, end_nodes):
 
         
     
-def main(start_coords,destination_coords,G):
+def main(start_coords, destination_coords, mapped_coords ,G):
     
     #To this order to be passed to A* example will be 
     #declare global order tuple
     global order_dij
+    
+    counting_guy = 1
     order_dij = []
-
     graph = G
     # #Step1 Get graph
     # graph = downloadOSMX()
@@ -123,14 +124,18 @@ def main(start_coords,destination_coords,G):
     start_node = ox.distance.nearest_nodes(graph, start_coords[1], start_coords[0])
     end_nodes = []
     for end_location in destination_coords:
-        end_nodes.append(ox.distance.nearest_nodes(graph, end_location[1], end_location[0]))  
+        node = ox.distance.nearest_nodes(graph, end_location[1], end_location[0])
+        end_nodes.append(node)
+        print((graph.nodes[node]['y'],graph.nodes[node]['x']))
+        mapped_coords[counting_guy] = (graph.nodes[node]['y'],graph.nodes[node]['x'])
+        counting_guy +=1    
      
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
         print("hereeee")
         print(start_node,end_nodes)
-        current_node = nearest_neighbor(graph, start_node, end_nodes)
+        current_node = nearest_neighbor(graph, start_node, end_nodes,mapped_coords)
         #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
         end_nodes.remove(current_node)
@@ -139,7 +144,8 @@ def main(start_coords,destination_coords,G):
     
 
     print("All end nodes have been visited")
+    print(mapped_coords)
     
-    return order_dij
+    return order_dij, mapped_coords
 if __name__ == "__main__":
     main()

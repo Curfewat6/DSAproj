@@ -1,8 +1,9 @@
 import heapq
+import random
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
-from flask import Flask, jsonify, render_template, request,redirect, url_for
+from flask import Flask, jsonify, render_template, request,redirect, url_for, session
 import dij
 import location
 
@@ -178,6 +179,7 @@ def index():
 #results is shown in results.html
 @app.route('/checkAddress', methods=['POST'])
 def check_address():
+    counter = 0
     start_location = request.form['startLocation']
     num_destinations = int(request.form['numDestinations'])
     
@@ -188,8 +190,22 @@ def check_address():
     
     # Convert addresses to coordinates using location.py
     start_data = location.addr2coord(start_location)
+
+    # Store data in session
+    session[f'address{counter}'] = start_data['address']
+    session[f'lcoords{counter}'] = start_data['coords']
+    # VERY IMPORTANT: Add in an ID
+    session[f'{counter}'] = counter
     destination_data = [location.addr2coord(dest) for dest in destinations]
     
+    for i in destination_data:
+        session[f'address{counter+1}'] = i['address']
+        session[f'lcoords{counter+1}'] = i['coords']
+        # VERY IMPORTANT: Add in an ID
+        session[f'{counter + 1}'] = counter + 1
+        counter +=1
+
+    session['counter'] = counter
     # Now you have start_data and destination_data
     # You can proceed with the rest of your logic here
     
@@ -201,17 +217,44 @@ def check_address():
 #results is shown in results.html
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
+    counter = session.get('counter')
+    # Created an empty dictionary to map ID to coordiante
+
+    #THIS PART ABIT MESSY. PAISEH. will clean up
+    mapper = {}
     start_location = request.form['startLocation']
     destinations = request.form.getlist('destinations')
-    
+    # print("YOUR INPUTS ARE BELOW")
+    # print()
+    # print()
+    # print()
+    # print() 
+    # print(start_location)
+    # print(destinations)
     # Convert addresses to coordinates using location.py
-    start_data = location.addr2coord(start_location)
-    start_coords = start_data['coords']
-    destination_data = [location.addr2coord(dest) for dest in destinations]
-    destination_coords = [data['coords'] for data in destination_data]
-    
+   # start_data = location.addr2coord(start_location)
+
+   #Retrieve info from session
+    start_coords = session.get('lcoords0')
+    # session['start_coords'] = start_coords
+    # destination_data = [location.addr2coord(dest) for dest in destinations]
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()    # Just a quick fix 
+    # session['destination_coords'] = destination_coords
+
+    # Tag the ID to each coordinate
+    for i in range(counter+1):
+        identifier = session.get(f'{i}')
+        print(identifier)
+        mapper[identifier] = session.get(f'lcoords{i}')
+    # print("MAPPING")
+    # print("COOOOORDSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
+    # print(start_coords)
+    # print(destination_coords)
+    # print(mapper)
     # Call the nearest neighbor function from dij.py
-    order_from_dij = dij.main(start_coords, destination_coords, G)
+    # I Pass the dict to dij to make sure the coordinate in the dict also change. so now dict will have new coordinate
+    order_from_dij, mapped = dij.main(start_coords, destination_coords, mapper, G)
     
     print(order_from_dij)
 
@@ -221,35 +264,62 @@ def generate_order():
     # print("Third element of the first tuple:", order_from_dij[0][2])
     # print("Fourth element of the first tuple:", order_from_dij[0][3])
 
+
+    reversed_mapper = {coords: id for id, coords in mapped.items()}
+
+    # Initialize an empty list to store the sorted IDs
+    sorted_ids = []
+    sorted_ids.append(0)
+    # Iterate through the tuples in order_from_dij
+    for tup in order_from_dij:
+        # Extract the 3rd and 4th elements as a tuple
+        coords = (tup[2], tup[3])
+        # Check if these coordinates are in the reversed_mapper
+        if coords in reversed_mapper:
+            # If so, add the corresponding ID to the sorted_ids list
+            sorted_ids.append(reversed_mapper[coords])
+
+    print("Sorted IDs:", sorted_ids)
     # Prepare the data to be displayed in order.html
+    # The flow is -> levenstein -> store in session-> put ID in dict-> dij -> change the value in dict but ID remains same -> print using ID to maintain order
     ordered_data = []
     for i, coord in enumerate(order_from_dij):
         start_coords = (coord[0], coord[1])
         end_coords = (coord[2], coord[3])
-        start_address = location.coord2addr(start_coords)  # Get full address from coordinates
-        end_address = location.coord2addr(end_coords)  # Get full address from coordinates
         ordered_data.append({
-            'start': start_coords,
-            'end': end_coords,
-            'start_address': start_address,
-            'end_address': end_address,
+            'start': session.get(f'lcoords{sorted_ids[i]}'),
+            'end': session.get(f'lcoords{sorted_ids[i+1]}'),
+            'start_address': session.get(f'address{sorted_ids[i]}'),
+            'end_address': session.get(f'address{sorted_ids[i+1]}'),
             'index': i + 1
         })
     
     return render_template('order.html', ordered_data=ordered_data)
 
+#step 4, based on the order given, plot the route
+@app.route('/plot')
+def plot():
+    start_coords = session.get('start_coords')
+    destination_coords = session.get('destination_coords')
+    print("DEBUGGER")
+    print(destination_coords)
+    return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords)
 
-
-
+#step5, if need be, update route
 @app.route('/update_route')
 def update_route():
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
 
-    # Calculate the original route from Ubi to Ang Mo Kio Hub
-    ang_mo_kio_coords = location.addr2coord("ang mo kio hub")
-    ang_mo_kio_node = get_nearest_node(G, ang_mo_kio_coords)
+    # Initalise nodes and coordinates
+    start_coords = session.get('start_coords')
+    start_node = get_nearest_node(G, start_coords)
+    destination_coords = session.get('destination_coords')
+    destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+
+    first_destination = session.get('destination_coords')[0]
+    ang_mo_kio_node = destination_nodes[0]
     neighbor_node = get_nearest_neighbor_node(G, ang_mo_kio_node, exclude_node=None)
 
     original_segment = a_star_search(G, start_node, ang_mo_kio_node)
@@ -266,7 +336,8 @@ def update_route():
             avoid_edges.add((original_segment[i + 1], original_segment[i]))
 
     # Simulate high traffic using a copied graph
-    G_simulated = simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("bishan mrt"))
+    # G_simulated = simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("ang mo kio hub"))
+    G_simulated = simulate_high_traffic(G, start_coords, first_destination)
 
     optimal_order = find_optimal_order(start_node, destination_nodes)
 
@@ -309,4 +380,6 @@ def update_route():
     return jsonify(original_route_data=original_route_data, new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
 
 if __name__ == '__main__':
+    app.secret_key = 'super secret key'
+    app.config['SESSION_TYPE'] = 'filesystem'
     app.run(debug=True)
