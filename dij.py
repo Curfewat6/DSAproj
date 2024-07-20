@@ -52,7 +52,7 @@ def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
         #Exit after first end node is found 
         if current_node in end_nodes:
             print("First end node found, treat this end node as start node again")
-            print(current_node,end_nodes)
+
             
 
             # Convert start_node and current_node to coordinates and add to order tuple
@@ -133,14 +133,11 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
-        print("hereeee")
-        print(start_node,end_nodes)
         current_node = nearest_neighbor(graph, start_node, end_nodes,mapped_coords)
         #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
         end_nodes.remove(current_node)
-        print("here already ")
-        print(start_node,end_nodes)
+        
     
 
     print("All end nodes have been visited")

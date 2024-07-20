@@ -214,7 +214,7 @@ def check_address():
     
 
 #step 3, from result.html, user click generate will come to this function to user dij.py to generate the order
-#results is shown in results.html
+#results is shown in order.html
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
     counter = session.get('counter')
