@@ -299,8 +299,10 @@ def generate_order():
 #step 4, based on the order given, plot the route
 @app.route('/plot')
 def plot():
-    start_coords = session.get('start_coords')
-    destination_coords = session.get('destination_coords')
+    counter = session.get('counter')
+    start_coords = session.get('lcoords0')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()    # Just a quick fix 
     print("DEBUGGER")
     print(destination_coords)
     return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords)
@@ -308,17 +310,19 @@ def plot():
 #step5, if need be, update route
 @app.route('/update_route')
 def update_route():
+    counter = session.get('counter')
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
 
     # Initalise nodes and coordinates
-    start_coords = session.get('start_coords')
+    start_coords = session.get('lcoords0')
     start_node = get_nearest_node(G, start_coords)
-    destination_coords = session.get('destination_coords')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()    # Just a quick fix 
     destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
-    first_destination = session.get('destination_coords')[0]
+    first_destination = destination_coords[0]
     ang_mo_kio_node = destination_nodes[0]
     neighbor_node = get_nearest_neighbor_node(G, ang_mo_kio_node, exclude_node=None)
 
