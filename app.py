@@ -162,10 +162,6 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 
     return nearest_neighbor
 
-# Function to find the optimal order of visiting nodes (modified to visit in specified order)
-def find_optimal_order(start, destinations):
-    return destinations
-
 #Step 1 , user input form
 @app.route('/')
 def index():
@@ -214,44 +210,24 @@ def check_address():
     
 
 #step 3, from result.html, user click generate will come to this function to user dij.py to generate the order
-#results is shown in order.html
+#results is shown in results.html
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
     counter = session.get('counter')
-    # Created an empty dictionary to map ID to coordiante
-
-    #THIS PART ABIT MESSY. PAISEH. will clean up
+    # Create an empty dictionary to map ID to coordiante
     mapper = {}
-    start_location = request.form['startLocation']
-    destinations = request.form.getlist('destinations')
-    # print("YOUR INPUTS ARE BELOW")
-    # print()
-    # print()
-    # print()
-    # print() 
-    # print(start_location)
-    # print(destinations)
-    # Convert addresses to coordinates using location.py
-   # start_data = location.addr2coord(start_location)
 
-   #Retrieve info from session
+    # Retrieve info from session
     start_coords = session.get('lcoords0')
-    # session['start_coords'] = start_coords
-    # destination_data = [location.addr2coord(dest) for dest in destinations]
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
     destination_coords.pop()    # Just a quick fix 
-    # session['destination_coords'] = destination_coords
 
     # Tag the ID to each coordinate
     for i in range(counter+1):
         identifier = session.get(f'{i}')
         print(identifier)
         mapper[identifier] = session.get(f'lcoords{i}')
-    # print("MAPPING")
-    # print("COOOOORDSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
-    # print(start_coords)
-    # print(destination_coords)
-    # print(mapper)
+
     # Call the nearest neighbor function from dij.py
     # I Pass the dict to dij to make sure the coordinate in the dict also change. so now dict will have new coordinate
     order_from_dij, mapped = dij.main(start_coords, destination_coords, mapper, G)
@@ -280,6 +256,7 @@ def generate_order():
             sorted_ids.append(reversed_mapper[coords])
 
     print("Sorted IDs:", sorted_ids)
+    session['sorted_ids'] = sorted_ids
     # Prepare the data to be displayed in order.html
     # The flow is -> levenstein -> store in session-> put ID in dict-> dij -> change the value in dict but ID remains same -> print using ID to maintain order
     ordered_data = []
@@ -297,8 +274,9 @@ def generate_order():
     return render_template('order.html', ordered_data=ordered_data)
 
 #step 4, based on the order given, plot the route
-@app.route('/plot')
+@app.route('/plot', methods=['POST'])
 def plot():
+    session['target'] = request.form['step_number']
     counter = session.get('counter')
     start_coords = session.get('lcoords0')
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
@@ -311,77 +289,92 @@ def plot():
 @app.route('/update_route')
 def update_route():
     counter = session.get('counter')
+    target = int(session.get('target'))  # Get the target step number
+    sorted_ids = session.get('sorted_ids')
+    print(target)
+    print(sorted_ids)
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
-
-    # Initalise nodes and coordinates
-    start_coords = session.get('lcoords0')
-    start_node = get_nearest_node(G, start_coords)
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    destination_coords.pop()    # Just a quick fix 
+    destination_coords.pop()    # Just a quick fix
     destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+    print("cooordies")
+    print(destination_coords)
+    if target == 1:
+        start_coords = session.get('lcoords0')
+        start_node = get_nearest_node(G, start_coords)
+    else:
+        start_node = destination_nodes[sorted_ids[target - 1] - 1]
 
-    first_destination = destination_coords[0]
-    ang_mo_kio_node = destination_nodes[0]
-    neighbor_node = get_nearest_neighbor_node(G, ang_mo_kio_node, exclude_node=None)
+    
+    print(destination_nodes)
+    # Select the target destination based on the step number    
+    target_node = destination_nodes[sorted_ids[target] - 1]
 
-    original_segment = a_star_search(G, start_node, ang_mo_kio_node)
-    original_route_data = []
-    avoid_edges = set()
-
-    if original_segment and len(original_segment) > 1:
-        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
-        original_route_data.append({'coords': segment_coords, 'color': 'red'})
-
-        # Add edges to the avoid set
-        for i in range(len(original_segment) - 1):
-            avoid_edges.add((original_segment[i], original_segment[i + 1]))
-            avoid_edges.add((original_segment[i + 1], original_segment[i]))
-
-    # Simulate high traffic using a copied graph
-    # G_simulated = simulate_high_traffic(G, location.addr2coord("ubi challenger warehouse"), location.addr2coord("ang mo kio hub"))
-    G_simulated = simulate_high_traffic(G, start_coords, first_destination)
-
-    optimal_order = find_optimal_order(start_node, destination_nodes)
-
-    route_nodes = [start_node]
     route_segments = []
     total_distance = 0
     total_time = 0
 
-    for i, dest_node in enumerate(optimal_order):
-        if dest_node == ang_mo_kio_node:
-            dest_node = neighbor_node  # Use the neighbor node instead
+    # Calculate the route for the specified step
+    segment = a_star_search(G, start_node, target_node)
+    if segment and len(segment) > 1:
+        segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
+        route_segments.append(segment_coords)
 
-        segment = a_star_search(G_simulated, route_nodes[-1], dest_node, avoid_edges)
-        if segment and len(segment) > 1:
-            route_segments.append(segment)
-            route_nodes.extend(segment[1:])  # Avoid duplicating nodes
-
-            segment_distance = sum(G_simulated[segment[j]][segment[j + 1]][0]['length'] for j in range(len(segment) - 1)) / 1000  # Convert to km
-            speed_band = G_simulated[segment[0]][segment[1]][0].get('speed_band', 5)
-            traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
-            segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
-
-            total_distance += segment_distance
-            total_time += segment_time
+        segment_distance = sum(G[segment[j]][segment[j + 1]].get('length', 0) for j in range(len(segment) - 1)) / 1000  # Default to 0 if 'length' is missing
+        speed_band = G[segment[0]][segment[1]].get('speed_band', 5)
+        traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
+        segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor
+        total_distance += segment_distance
+        total_time += segment_time
 
     # Prepare the data to send back
-    new_route_data = []
-    for segment in route_segments:
-        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in segment]
-        speed_band = G_simulated[segment[0]][segment[1]][0].get('speed_band', 5)
-        if speed_band >= 5:
-            color = 'green'
-        elif speed_band >= 3:
-            color = 'yellow'
-        else:
-            color = 'red'
-            
-        new_route_data.append({'coords': segment_coords, 'color': color})
+    new_route_data = [{'coords': segment, 'color': 'green'} for segment in route_segments]
 
-    return jsonify(original_route_data=original_route_data, new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+    return jsonify(original_route_data=[], new_route_data=new_route_data, total_distance=total_distance, total_time=total_time)
+
+@app.route('/simulate_traffic')
+def simulate_traffic():
+    counter = session.get('counter')
+    target = int(session.get('target'))  # Get the target step number
+    sorted_ids = session.get('sorted_ids')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()  # Just a quick fix
+    destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+
+    if target == 1:
+        start_coords = session.get('lcoords0')
+        start_node = get_nearest_node(G, start_coords)
+    else:
+        start_coords = destination_coords[sorted_ids[target - 1] - 1]
+        start_node = destination_nodes[sorted_ids[target - 1] - 1]
+
+    first_destination = destination_coords[sorted_ids[target] - 1]
+    first_destination_node = destination_nodes[sorted_ids[target] - 1]
+
+    # Simulate high traffic using a copied graph
+    G_simulated = simulate_high_traffic(G, start_coords, first_destination)
+
+    original_segment = a_star_search(G_simulated, start_node, first_destination_node)
+    original_route_data = []
+
+    if original_segment and len(original_segment) > 1:
+        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
+        original_route_data.append({'coords': segment_coords, 'color': 'red'})
+
+    # Compute an alternative route using the nearest neighbor node of the destination
+    avoid_edges = set((original_segment[i], original_segment[i + 1]) for i in range(len(original_segment) - 1))
+    neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
+    alternative_segment = a_star_search(G_simulated, start_node, neighbor_node, avoid_edges)
+    alternative_route_data = []
+
+    if alternative_segment and len(alternative_segment) > 1:
+        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in alternative_segment]
+        alternative_route_data.append({'coords': segment_coords, 'color': 'green'})
+
+    return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data)
+
 
 if __name__ == '__main__':
     app.secret_key = 'super secret key'

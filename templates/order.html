@@ -33,11 +33,12 @@
         <h1 class="my-4">Order of Delivery</h1>
         <div class="list-group">
             {% for item in ordered_data %}
-            <form action="/plot">
+            <form action="/plot" method="POST">
                 <div class="route-step">
                     <h5>Step {{ item.index }}</h5>
                     <p><strong>From:</strong> {{ item.start_address }} ({{ item.start[0] }}, {{ item.start[1] }})</p>
                     <p><strong>To:</strong> {{ item.end_address }} ({{ item.end[0] }}, {{ item.end[1] }})</p>
+                    <input type="hidden" name="step_number" value="{{ item.index }}">
                     <button class="btn btn-primary view-route-btn">View Route</button>
                 </form>
                 </div>

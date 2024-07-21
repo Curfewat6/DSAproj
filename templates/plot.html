@@ -11,6 +11,7 @@
 <body>
     <h1>Dynamic Routing with Live Traffic</h1>
     <div id="map" style="height: 600px; width: 100%;"></div>
+    <button id="simulate-traffic">Simulate Traffic</button>
     <button id="update-route">Update Route</button>
     <p id="route-info"></p>
     <script>
@@ -44,6 +45,35 @@
         L.marker([start_coords[0], start_coords[1]], {icon: greenIcon}).bindPopup("Start").addTo(map);
         destination_coords.forEach(function(coords, index) {
             L.marker([coords[0], coords[1]], {icon: redIcon}).bindPopup("Destination " + (index + 1)).addTo(map);
+        });
+
+        $('#simulate-traffic').click(function() {
+            $.get('/simulate_traffic', function(data) {
+                // Clear existing polylines
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.Polyline) {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                // Add simulated heavy traffic route in red
+                data.original_route_data.forEach(function(segment) {
+                    var latlngs = segment.coords.map(function(coord) {
+                        return [coord[0], coord[1]];
+                    });
+                    L.polyline(latlngs, { color: 'red', weight: 5, opacity: 0.8 }).addTo(map);
+                });
+
+                // Add alternative route in green
+                data.alternative_route_data.forEach(function(segment) {
+                    var latlngs = segment.coords.map(function(coord) {
+                        return [coord[0], coord[1]];
+                    });
+                    L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
+                });
+
+                $('#route-info').text('Simulated heavy traffic shown in red, alternative route shown in green.');
+            });
         });
 
         $('#update-route').click(function() {
