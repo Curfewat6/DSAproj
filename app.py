@@ -131,21 +131,47 @@ def simulate_high_traffic(graph, start_coords, end_coords):
 # destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
 
 # Function to calculate the total path distance for a given order of nodes
-def calculate_total_distance(order):
+# def calculate_total_distance(order):
+#     total_distance = 0
+#     total_time = 0
+#     current_node = start_node
+#     for node in order:
+#         segment = a_star_search(G, current_node, node)
+#         if segment and len(segment) > 1:
+#             segment_distance = sum(G[segment[i]][segment[i + 1]][0]['length'] for i in range(len(segment) - 1)) / 1000  # Convert to km
+#             speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
+#             traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
+#             segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
+#             total_distance += segment_distance
+#             total_time += segment_time
+#         current_node = node
+#     return total_distance, total_time
+
+def calculate_route_distance_and_time(route, graph):
     total_distance = 0
     total_time = 0
-    current_node = start_node
-    for node in order:
-        segment = a_star_search(G, current_node, node)
-        if segment and len(segment) > 1:
-            segment_distance = sum(G[segment[i]][segment[i + 1]][0]['length'] for i in range(len(segment) - 1)) / 1000  # Convert to km
-            speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
-            traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
-            segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
+
+    for i in range(len(route) - 1):
+        u = route[i]
+        v = route[i + 1]
+
+        if u in graph and v in graph[u]:
+            edge_data = graph[u][v][0]
+            segment_distance = edge_data.get('length', 0) / 1000  # Convert to km
+            speed_band = edge_data.get('speed_band', 40)  # Default to 40 km/h if not set
+            traffic_factor = 1.0 if speed_band >= 40 else 1.2 if speed_band >= 20 else 1.5
+            
+            # Calculate segment time in hours and then convert to minutes
+            segment_time_hours = segment_distance / speed_band  # Time in hours
+            segment_time_minutes = segment_time_hours * 60  # Convert to minutes
+            
+            adjusted_segment_time = segment_time_minutes * traffic_factor  # Adjusted time with traffic factor
+
             total_distance += segment_distance
-            total_time += segment_time
-        current_node = node
+            total_time += adjusted_segment_time
+
     return total_distance, total_time
+
 
 def get_nearest_neighbor_node(graph, node, exclude_node):
     nearest_neighbor = None
@@ -283,7 +309,28 @@ def plot():
     destination_coords.pop()    # Just a quick fix 
     print("DEBUGGER")
     print(destination_coords)
-    return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords)
+    start_node = get_nearest_node(G, start_coords)
+    destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
+
+    route_segments = []
+    total_distance = 0
+    total_time = 0
+
+    for i in range(len(destination_nodes)):
+        if i == 0:
+            segment = a_star_search(G, start_node, destination_nodes[i])
+        else:
+            segment = a_star_search(G, destination_nodes[i-1], destination_nodes[i])
+
+        if segment:
+            segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
+            route_segments.append(segment_coords)
+
+            segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
+            total_distance += segment_distance
+            total_time += segment_time
+
+    return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords, total_distance=total_distance, total_time=total_time)
 
 #step5, if need be, update route
 @app.route('/update_route')
@@ -293,9 +340,11 @@ def update_route():
     sorted_ids = session.get('sorted_ids')
     print(target)
     print(sorted_ids)
+    
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G, traffic_data)
+    
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
     destination_coords.pop()    # Just a quick fix
     destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
@@ -322,10 +371,7 @@ def update_route():
         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
         route_segments.append(segment_coords)
 
-        segment_distance = sum(G[segment[j]][segment[j + 1]].get('length', 0) for j in range(len(segment) - 1)) / 1000  # Default to 0 if 'length' is missing
-        speed_band = G[segment[0]][segment[1]].get('speed_band', 5)
-        traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
-        segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor
+        segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
         total_distance += segment_distance
         total_time += segment_time
 
@@ -362,18 +408,28 @@ def simulate_traffic():
     if original_segment and len(original_segment) > 1:
         segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
         original_route_data.append({'coords': segment_coords, 'color': 'red'})
+        
+    # Fetch LTA traffic data and update edge weights
+    api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
+    traffic_data = fetch_traffic_flow_data(api_key)
+    update_edge_weights(G_simulated, traffic_data)
 
     # Compute an alternative route using the nearest neighbor node of the destination
     avoid_edges = set((original_segment[i], original_segment[i + 1]) for i in range(len(original_segment) - 1))
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
     alternative_segment = a_star_search(G_simulated, start_node, neighbor_node, avoid_edges)
     alternative_route_data = []
+    alt_total_distance = 0
+    alt_total_time = 0
 
     if alternative_segment and len(alternative_segment) > 1:
         segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in alternative_segment]
         alternative_route_data.append({'coords': segment_coords, 'color': 'green'})
+        
+        # Calculate total distance and time for alternative route with heavy traffic
+        alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G_simulated)
 
-    return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data)
+    return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
 
 
 if __name__ == '__main__':

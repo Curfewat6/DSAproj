@@ -72,7 +72,8 @@
                     L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
                 });
 
-                $('#route-info').text('Simulated heavy traffic shown in red, alternative route shown in green.');
+                $('#route-info').html(`Simulated heavy traffic shown in red, alternative route shown in green.<br>
+                Alternative Distance: ${data.alt_total_distance.toFixed(2)} km, Alternative Time: ${data.alt_total_time.toFixed(2)} minutes`);
             });
         });
 
