@@ -286,7 +286,17 @@ def generate_order():
     # Prepare the data to be displayed in order.html
     # The flow is -> levenstein -> store in session-> put ID in dict-> dij -> change the value in dict but ID remains same -> print using ID to maintain order
     ordered_data = []
+    total_distance = 0
+    total_time = 0
     for i, coord in enumerate(order_from_dij):
+        start_id = sorted_ids[i]
+        end_id = sorted_ids[i + 1]
+        start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
+        end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
+
+        segment_distance, segment_time = calculate_route_distance_and_time(a_star_search(G, start_node, end_node), G)
+        total_distance += segment_distance
+        total_time += segment_time
         start_coords = (coord[0], coord[1])
         end_coords = (coord[2], coord[3])
         ordered_data.append({
@@ -294,10 +304,12 @@ def generate_order():
             'end': session.get(f'lcoords{sorted_ids[i+1]}'),
             'start_address': session.get(f'address{sorted_ids[i]}'),
             'end_address': session.get(f'address{sorted_ids[i+1]}'),
-            'index': i + 1
+            'index': i + 1,
+            'segment_distance': round(segment_distance, 2),
+            'segment_time': round(segment_time, 2)
         })
     
-    return render_template('order.html', ordered_data=ordered_data)
+    return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
 #step 4, based on the order given, plot the route
 @app.route('/plot', methods=['POST'])
