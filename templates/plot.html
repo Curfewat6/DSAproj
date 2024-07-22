@@ -3,15 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Routing with Live Traffic</title>
+    <title>Routing with Live Traffic</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            padding: 20px;
+        }
+        #map {
+            height: 600px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .route-info {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .route-info h5 {
+            margin-bottom: 10px;
+        }
+        .route-info p {
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
-    <h1>Dynamic Routing with Live Traffic</h1>
-    <div id="map" style="height: 600px; width: 100%;"></div>
+    <h1>Route Details: {{ 'Entire Route' if entire_route else 'Step ' + step_number }}</h1>
+    <div id="map"></div>
+    <div class="route-info">
+        <h5>{{ 'Entire Route' if entire_route else 'Step ' + step_number }}</h5>
+        <p><strong>From:</strong> {{ start_address }} ({{ start_coords[0] }}, {{ start_coords[1] }})</p>
+        <p><strong>To:</strong> {{ end_address }} ({{ end_coords[0] }}, {{ end_coords[1] }})</p>
+        <p id="route-distance"><strong>Distance:</strong> {{ segment_distance }} km</p>
+        <p id="route-time"><strong>Time:</strong> {{ segment_time }} minutes</p>
+    </div>
+    {% if not entire_route %}
     <button id="simulate-traffic">Simulate Traffic</button>
+    {% endif %}
     <p id="route-info"></p>
     <script>
         var map = L.map('map').setView([1.3321, 103.8934], 13);
@@ -50,6 +81,7 @@
             L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
         });
 
+        {% if not entire_route %}
         $('#simulate-traffic').click(function() {
             $.get('/simulate_traffic', function(data) {
                 // Clear existing polylines
@@ -75,9 +107,11 @@
                     L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
                 });
 
-                $('#route-info').text(`Total Distance: ${data.alt_total_distance.toFixed(2)} km, Total Time: ${data.alt_total_time.toFixed(2)} minutes`);
+                $('#route-distance').text(`Total Distance: ${data.alt_total_distance.toFixed(2)} km`);
+                $('#route-time').text(`Total Time: ${data.alt_total_time.toFixed(2)} minutes`);
             });
         });
+        {% endif %}
     </script>
 </body>
 </html>
