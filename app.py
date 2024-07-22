@@ -253,7 +253,7 @@ def generate_order():
 
     # Precompute routes
     precomputed_routes = []
-    for i in range(len(sorted_ids) - 1):
+    for i in range(len(sorted_ids)   - 1):
         start_id = sorted_ids[i]
         end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
