@@ -1,5 +1,4 @@
 import heapq
-import random
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
@@ -413,8 +412,6 @@ def simulate_traffic():
         alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G_simulated)
 
     return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
-
-
 
 if __name__ == '__main__':
     app.secret_key = 'super secret key'
