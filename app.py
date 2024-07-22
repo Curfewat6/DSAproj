@@ -111,41 +111,8 @@ def simulate_high_traffic(graph, start_coords, end_coords):
     for u, v, key, data in graph_copy.edges(keys=True, data=True):
         if (u == start_node and v == end_node) or (u == end_node and v == start_node):
             data['speed_band'] = 1  # Simulate heavy traffic
-            data['travel_time'] = data['length'] / (1 * 1000 / 60) * 3  # Triple the travel time
+            data['travel_time'] = data['length'] / (1 * 1000 / 60) * 1000  # Triple the travel time
     return graph_copy
-
-# # Input coordinates (latitude, longitude)
-# start_coords = location.addr2coord("ubi challenger warehouse")  # [Ubi Challenger warehouse]
-# destinations = [
-#     location.addr2coord("great world city"),     # GWC [Furthest]
-#     location.addr2coord("ion orchard"),     # ION orchard [middle]
-#     location.addr2coord("ang mo kio hub")      # Ang Mo Kio Hub
-# ]
-
-# order_from_dij = dij.main(start_coords, destinations, G)
-# print("Order of delivery is: ", order_from_dij)
-
-# # Find the nearest nodes in the graph to the given coordinates
-# start_node = get_nearest_node(G, start_coords)
-# destination_coords = [(coord[2], coord[3]) for coord in order_from_dij]
-# destination_nodes = [get_nearest_node(G, coords) for coords in destination_coords]
-
-# Function to calculate the total path distance for a given order of nodes
-# def calculate_total_distance(order):
-#     total_distance = 0
-#     total_time = 0
-#     current_node = start_node
-#     for node in order:
-#         segment = a_star_search(G, current_node, node)
-#         if segment and len(segment) > 1:
-#             segment_distance = sum(G[segment[i]][segment[i + 1]][0]['length'] for i in range(len(segment) - 1)) / 1000  # Convert to km
-#             speed_band = G[segment[0]][segment[1]][0].get('speed_band', 5)
-#             traffic_factor = 1.0 if speed_band >= 5 else 1.2 if speed_band >= 3 else 1.5
-#             segment_time = segment_distance / (speed_band * 1000 / 60) * traffic_factor  # Time in minutes
-#             total_distance += segment_distance
-#             total_time += segment_time
-#         current_node = node
-#     return total_distance, total_time
 
 def calculate_route_distance_and_time(route, graph):
     total_distance = 0
@@ -192,10 +159,6 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 @app.route('/')
 def index():
     return render_template('form.html')
-
-# @app.route('/')
-# def index():
-#     return render_template('index.html', start_coords=start_coords, destination_coords=destination_coords)
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
 #results is shown in results.html
@@ -331,8 +294,10 @@ def plot():
 
     return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time)
 
+
 @app.route('/simulate_traffic')
 def simulate_traffic():
+    api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     counter = session.get('counter')
     target = int(session.get('target'))  # Get the target step number
     sorted_ids = session.get('sorted_ids')
@@ -361,7 +326,6 @@ def simulate_traffic():
         original_route_data.append({'coords': segment_coords, 'color': 'red'})
         
     # Fetch LTA traffic data and update edge weights
-    api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G_simulated, traffic_data)
 
@@ -381,6 +345,7 @@ def simulate_traffic():
         alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G_simulated)
 
     return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
+
 
 
 if __name__ == '__main__':
