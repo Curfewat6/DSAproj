@@ -143,7 +143,7 @@ def calculate_route_distance_and_time(route, graph):
             segment_distance = edge_data.get('length', 0) / 1000  # Convert to km
             speed_band = edge_data.get('speed_band', 5)  # Default to 5 if not set
             speed = speed_band_to_speed(speed_band)
-             
+            
             # Calculate segment time in hours and then convert to minutes
             segment_time_hours = segment_distance / speed  # Time in hours
             segment_time_minutes = segment_time_hours * 60 # Convert to minutes
