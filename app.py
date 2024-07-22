@@ -125,17 +125,15 @@ def calculate_route_distance_and_time(route, graph):
         if u in graph and v in graph[u]:
             edge_data = graph[u][v][0]
             segment_distance = edge_data.get('length', 0) / 1000  # Convert to km
-            speed_band = edge_data.get('speed_band', 40)  # Default to 40 km/h if not set
-            traffic_factor = 1.0 if speed_band >= 40 else 1.2 if speed_band >= 20 else 1.5
+            speed_band = edge_data.get('speed_band', 5)  # Default to 5 if not set
+            speed = speed_band_to_speed(speed_band)
             
             # Calculate segment time in hours and then convert to minutes
-            segment_time_hours = segment_distance / speed_band  # Time in hours
-            segment_time_minutes = segment_time_hours * 60  # Convert to minutes
-            
-            adjusted_segment_time = segment_time_minutes * traffic_factor  # Adjusted time with traffic factor
+            segment_time_hours = segment_distance / speed  # Time in hours
+            segment_time_minutes = segment_time_hours * 60 # Convert to minutes
 
             total_distance += segment_distance
-            total_time += adjusted_segment_time
+            total_time += segment_time_minutes
 
     return total_distance, total_time
 
@@ -214,6 +212,14 @@ def generate_order():
     for i in range(counter+1):
         identifier = session.get(f'{i}')
         mapper[identifier] = session.get(f'lcoords{i}')
+        
+    # Fetch LTA traffic data and update edge weights
+    # api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
+    # traffic_data = fetch_traffic_flow_data(api_key)
+    # if traffic_data:
+    #     update_edge_weights(G, traffic_data)
+    # else:
+    #     print("Failed to fetch or update traffic data")
 
     # Call the nearest neighbor function from dij.py
     order_from_dij, mapped = dij.main(start_coords, destination_coords, mapper, G)
