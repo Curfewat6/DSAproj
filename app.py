@@ -114,6 +114,22 @@ def simulate_high_traffic(graph, start_coords, end_coords):
             data['travel_time'] = data['length'] / (1 * 1000 / 60) * 1000  # Triple the travel time
     return graph_copy
 
+# Speed Band Calculation
+def speed_band_to_speed(speed_band):
+    # Convert speed band to speed in km/h based on LTA definitions
+    if speed_band == 1:
+        return 5  # Severe congestion or road closure
+    elif speed_band == 2:
+        return 10  # Heavy traffic
+    elif speed_band == 3:
+        return 20  # Moderate traffic
+    elif speed_band == 4:
+        return 30  # Light traffic
+    elif speed_band == 5:
+        return 40  # Free flow
+    else:
+        return 40  # Default to free flow if unknown band
+    
 def calculate_route_distance_and_time(route, graph):
     total_distance = 0
     total_time = 0
@@ -127,7 +143,7 @@ def calculate_route_distance_and_time(route, graph):
             segment_distance = edge_data.get('length', 0) / 1000  # Convert to km
             speed_band = edge_data.get('speed_band', 5)  # Default to 5 if not set
             speed = speed_band_to_speed(speed_band)
-            
+             
             # Calculate segment time in hours and then convert to minutes
             segment_time_hours = segment_distance / speed  # Time in hours
             segment_time_minutes = segment_time_hours * 60 # Convert to minutes
