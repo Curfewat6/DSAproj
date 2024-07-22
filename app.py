@@ -262,6 +262,21 @@ def generate_order():
         precomputed_routes.append(segment)
     
     session['precomputed_routes'] = precomputed_routes
+    
+    # Precompute the entire route
+    entire_route_segments = []
+    total_distance = 0
+    total_time = 0
+    for segment in precomputed_routes:
+        if segment:
+            segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
+            entire_route_segments.append(segment_coords)
+
+            segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
+            total_distance += segment_distance
+            total_time += segment_time
+
+    session['entire_route_segments'] = entire_route_segments
 
     ordered_data = []
     total_distance = 0
@@ -313,8 +328,38 @@ def plot():
         segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
         total_distance += segment_distance
         total_time += segment_time
+        
+    start_address = session.get(f'address{target-1}')
+    end_address = session.get(f'address{target}')
+    start_coords = session.get(f'lcoords{target-1}')
+    end_coords = session.get(f'lcoords{target}')
 
-    return render_template('plot.html', start_coords=start_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time)
+    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
+
+@app.route('/plot_entire_route', methods=['POST'])
+def plot_entire_route():
+    entire_route_segments = session.get('entire_route_segments')
+    counter = session.get('counter')
+
+    start_coords = session.get('lcoords0')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()  # Just a quick fix
+
+    total_distance = session.get('total_distance')
+    total_time = session.get('total_time')
+
+    for segment in entire_route_segments:
+        segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
+        total_distance += segment_distance
+        total_time += segment_time
+        
+    start_address = session.get('address0')
+    end_address = session.get(f'address{counter}')
+    start_coords = session.get(f'lcoords0')
+    end_coords = session.get(f'lcoords{counter}')
+
+    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance, total_time=total_time, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance, 2), segment_time=round(total_time, 2), entire_route=True)
+
 
 
 @app.route('/simulate_traffic')

@@ -26,11 +26,28 @@
             .view-route-btn {
                 margin-top: 10px;
             }
+            .summary {
+                margin-bottom: 30px;
+                padding: 20px;
+                border: 1px solid #28a745;
+                border-radius: 5px;
+                background-color: #d4edda;
+            }
+            .summary h5 {
+                margin-bottom: 10px;
+            }
         </style>
     </head>
 <body>
     <div class="container">
         <h1 class="my-4">Order of Delivery</h1>
+        <div class="summary">
+            <h5>Total Distance: {{ total_distance }} km</h5>
+            <h5>Total Time: {{ total_time }} minutes</h5>
+            <form action="/plot_entire_route" method="POST">
+                <button class="btn btn-success view-route-btn">View Entire Route</button>
+            </form>
+        </div>
         <div class="list-group">
             {% for item in ordered_data %}
             <form action="/plot" method="POST">
@@ -45,6 +62,7 @@
                 </form>
                 </div>
             {% endfor %}
+            
         </div>
     </div>
     <!-- Bootstrap JS and dependencies -->
