@@ -27,8 +27,9 @@ def downloadOSMX():
 
     return graph
 
-def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
+def nearest_neighbor(graph, start_node, end_nodes):
      # Initialize arrays
+   # print("YOOOOOOOOOOOOOOOOOOOOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOO")
     node_count=0
     path=[]
     distTo = {node: float('inf') for node in graph.nodes}
@@ -43,6 +44,7 @@ def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
     pq = [(0, start_node)]  # (distance, node)
 
     while pq:
+        
         node_count += 1
         # Get the node with the shortest distance
         current_distance, current_node = heapq.heappop(pq)
@@ -51,11 +53,14 @@ def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
         if marked[current_node]:
             continue
         marked[current_node] = True
-        
+        # if end_nodes == [1829398209]:
+        #     print("You made it")
         #Exit after first end node is found 
         if current_node in end_nodes:
-            print("First end node found, treat this end node as start node again")
-
+            if current_node == 1829398209:
+                print("You made it")
+            # print("First end node found, treat this end node as start node again")
+            # print(f"YOU ARE WORKING ON THIS NODE {current_node}")
             # #get path to the first end node 
             # trace_node = current_node
             # while trace_node != start_node:
@@ -69,7 +74,9 @@ def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
             # end_coords = (graph.nodes[current_node]['y'], graph.nodes[current_node]['x'])
             # print(start_node,current_node)
             order_dij.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
-            
+            # print("DEBUGGIN STATEMENT")
+            # print(f"NODE COUNT: {node_count}")
+            # print(f"CURRENT_NODE: {current_node}")
             return node_count, current_node
 
         # Get the neighbors of the current node
@@ -107,6 +114,8 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     dij_precomputed_route = []
     nodecount_segment=[]
     graph = G
+    # print("COORDS ARE HERE")
+    # print(mapped_coords)
     # #Step1 Get graph
     # graph = downloadOSMX()
     # if graph == None:
@@ -138,21 +147,24 @@ def main(start_coords, destination_coords, mapped_coords ,G):
         end_nodes.append(node)
         print((graph.nodes[node]['y'],graph.nodes[node]['x']))
         mapped_coords[counting_guy] = (graph.nodes[node]['y'],graph.nodes[node]['x'])
-        counting_guy +=1    
-     
+        counting_guy +=1
+    # print("END NODES")
+    # print(end_nodes)
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
-        number_of_nodes, current_node = nearest_neighbor(graph, start_node, end_nodes,mapped_coords)
+        print("BEFORE REMOVING")
+        print(end_nodes)
+        number_of_nodes, current_node = nearest_neighbor(graph, start_node, end_nodes)
         #dij_precomputed_route.append(path)
         nodecount_segment.append(number_of_nodes)
         #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
-        end_nodes.remove(current_node)
         
-    
-
-    
+        end_nodes.remove(current_node)
+        print("AFTER REMOVING")
+        print(end_nodes)
     return order_dij, mapped_coords, nodecount_segment
+
 if __name__ == "__main__":
     main()

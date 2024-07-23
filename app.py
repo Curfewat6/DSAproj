@@ -317,6 +317,7 @@ def generate_order():
 def plot():
     target = int(request.form['step_number'])  # Get the step number
     session['target'] = target
+    sorted_ids = session.get('sorted_ids')
     counter = session.get('counter')    
     precomputed_routes = session.get('precomputed_routes')
 
@@ -328,7 +329,11 @@ def plot():
     if target == 1:
         segment = precomputed_routes[0]
     else:
-        segment = precomputed_routes[target - 1]
+        print(target)
+        flow = target - 1
+        print(flow)
+        print(len(precomputed_routes))
+        segment = precomputed_routes[flow]
 
     route_segments = []
     total_distance = 0
@@ -342,10 +347,10 @@ def plot():
         total_distance += segment_distance
         total_time += segment_time
         
-    start_address = session.get(f'address{target-1}')
-    end_address = session.get(f'address{target}')
-    start_coords = session.get(f'lcoords{target-1}')
-    end_coords = session.get(f'lcoords{target}')
+    start_address = session.get(f'address{sorted_ids[target-1]}')
+    end_address = session.get(f'address{sorted_ids[target]}')
+    start_coords = session.get(f'lcoords{sorted_ids[target-1]}')
+    end_coords = session.get(f'lcoords{sorted_ids[target]}')
 
     return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
 
