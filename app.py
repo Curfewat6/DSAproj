@@ -282,6 +282,9 @@ def generate_order():
             total_time += segment_time
 
     session['entire_route_segments'] = entire_route_segments
+    session['total_distance'] = total_distance
+    session['total_time'] = total_time
+
 
     ordered_data = []
     total_distance = 0
@@ -358,10 +361,12 @@ def plot_entire_route():
     total_distance = session.get('total_distance')
     total_time = session.get('total_time')
 
-    for segment in entire_route_segments:
-        segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
-        total_distance += segment_distance
-        total_time += segment_time
+    # Ensure total_distance and total_time are not None
+    if total_distance is None:
+        total_distance = 0
+    if total_time is None:
+        total_time = 0
+
         
     start_address = session.get('address0')
     end_address = session.get(f'address{counter}')
