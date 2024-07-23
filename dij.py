@@ -56,13 +56,13 @@ def nearest_neighbor(graph, start_node, end_nodes, mapped_coords):
         if current_node in end_nodes:
             print("First end node found, treat this end node as start node again")
 
-            #get path to the first end node 
-            trace_node = current_node
-            while trace_node != start_node:
-                path.append(trace_node)
-                trace_node = edgeTo[trace_node]
-            path.append(start_node)
-            path.reverse()
+            # #get path to the first end node 
+            # trace_node = current_node
+            # while trace_node != start_node:
+            #     path.append(trace_node)
+            #     trace_node = edgeTo[trace_node]
+            # path.append(start_node)
+            # path.reverse()
 
             # Convert start_node and current_node to coordinates and add to order tuple
             # start_coords = (graph.nodes[start_node]['y'], graph.nodes[start_node]['x'])
@@ -105,7 +105,7 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     counting_guy = 1
     order_dij = []
     dij_precomputed_route = []
-    node_count=[]
+    nodecount_segment=[]
     graph = G
     # #Step1 Get graph
     # graph = downloadOSMX()
@@ -145,7 +145,7 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     while end_nodes != []:
         number_of_nodes, current_node = nearest_neighbor(graph, start_node, end_nodes,mapped_coords)
         #dij_precomputed_route.append(path)
-        node_count.append(number_of_nodes)
+        nodecount_segment.append(number_of_nodes)
         #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
         end_nodes.remove(current_node)
@@ -153,6 +153,6 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     
 
     
-    return order_dij, mapped_coords, node_count
+    return order_dij, mapped_coords, nodecount_segment
 if __name__ == "__main__":
     main()
