@@ -26,11 +26,13 @@ def heuristic(node1, node2, graph):
 
 # Custom A* search algorithm with traffic-aware cost calculation
 def a_star_search(graph, start, goal, avoid_edges=set()):
+    node_count = 0
     pq = [(0, start, [])]  # Priority queue as (cost, current_node, path)
     costs = {start: 0}
     visited = set()
     
     while pq:
+        node_count += 1
         cost, current, path = heapq.heappop(pq)
         
         if current in visited:
@@ -38,7 +40,7 @@ def a_star_search(graph, start, goal, avoid_edges=set()):
         
         path = path + [current]
         if current == goal:
-            return path
+            return path, node_count
         
         visited.add(current)
         
@@ -172,6 +174,7 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 #Step 1 , user input form
 @app.route('/')
 def index():
+    print(G)
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
@@ -238,7 +241,7 @@ def generate_order():
     #     print("Failed to fetch or update traffic data")
 
     # Call the nearest neighbor function from dij.py
-    order_from_dij, mapped = dij.main(start_coords, destination_coords, mapper, G)
+    order_from_dij, mapped , nodecount_segment_dij= dij.main(start_coords, destination_coords, mapper, G)
     
     reversed_mapper = {coords: id for id, coords in mapped.items()}
     print(mapper)
@@ -253,12 +256,14 @@ def generate_order():
 
     # Precompute routes
     precomputed_routes = []
+    nodecount_segment_astar=[]
     for i in range(len(sorted_ids)   - 1):
         start_id = sorted_ids[i]
         end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
-        segment = a_star_search(G, start_node, end_node)
+        segment,node_count = a_star_search(G, start_node, end_node)
+        nodecount_segment_astar.append(node_count)
         precomputed_routes.append(segment)
     
     session['precomputed_routes'] = precomputed_routes
@@ -277,6 +282,9 @@ def generate_order():
             total_time += segment_time
 
     session['entire_route_segments'] = entire_route_segments
+    session['total_distance'] = total_distance
+    session['total_time'] = total_time
+
 
     ordered_data = []
     total_distance = 0
@@ -294,7 +302,12 @@ def generate_order():
             'end_address': session.get(f'address{sorted_ids[i+1]}'),
             'index': i + 1,
             'segment_distance': round(segment_distance, 2),
-            'segment_time': round(segment_time, 2)
+            'segment_time': round(segment_time, 2),
+            # 'dij_segment_distance': round(dij_segment_distance, 2), 
+            # 'dij_segment_time': round(dij_segment_time, 2)
+            'number_of_nodes_dij': nodecount_segment_dij[i],
+            'number_of_nodes_astar': nodecount_segment_astar[i]
+
         })
     
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
@@ -348,10 +361,12 @@ def plot_entire_route():
     total_distance = session.get('total_distance')
     total_time = session.get('total_time')
 
-    for segment in entire_route_segments:
-        segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
-        total_distance += segment_distance
-        total_time += segment_time
+    # Ensure total_distance and total_time are not None
+    if total_distance is None:
+        total_distance = 0
+    if total_time is None:
+        total_time = 0
+
         
     start_address = session.get('address0')
     end_address = session.get(f'address{counter}')

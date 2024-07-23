@@ -57,6 +57,8 @@
                     <p><strong>To:</strong> {{ item.end_address }} ({{ item.end[0] }}, {{ item.end[1] }})</p>
                     <p><strong>Distance:</strong> {{ item.segment_distance }} km</p>
                     <p><strong>Time:</strong> {{ item.segment_time }} minutes</p>
+                    <p><strong>Number of nodes explored for A* start: </strong> {{ item.number_of_nodes_astar }} </p>
+                    <p><strong>Number of nodes explored for Dijkstra: </strong> {{ item.number_of_nodes_dij }} </p>
                     <input type="hidden" name="step_number" value="{{ item.index }}">
                     <button class="btn btn-primary view-route-btn">View Route</button>
                 </form>
