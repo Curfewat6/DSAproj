@@ -241,7 +241,7 @@ def generate_order():
     order_from_dij, mapped = dij.main(start_coords, destination_coords, mapper, G)
     
     reversed_mapper = {coords: id for id, coords in mapped.items()}
-
+    print(mapper)
     # Initialize an empty list to store the sorted IDs
     sorted_ids = [0]
     for tup in order_from_dij:
