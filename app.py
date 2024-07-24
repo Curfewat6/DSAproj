@@ -57,7 +57,7 @@ def a_star_search(graph, start, goal, avoid_edges=set()):
                 costs[neighbor] = new_cost
                 priority = new_cost + heuristic(neighbor, goal, graph)
                 heapq.heappush(pq, (priority, neighbor, path))
-    
+    print("No path found")
     return None
 
 # Function to fetch real-time traffic data from the Traffic Flow API
@@ -369,7 +369,6 @@ def plot_entire_route():
     if total_time_taken is None:
         total_time_taken = 0
 
-        
     start_address = session.get('address0')
     end_address = session.get(f'address{counter}')
     start_coords = session.get(f'lcoords0')
@@ -400,7 +399,7 @@ def simulate_traffic():
     # Simulate high traffic using a copied graph
     G_simulated = simulate_high_traffic(G, start_coords, first_destination)
 
-    original_segment = a_star_search(G_simulated, start_node, first_destination_node)
+    original_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node)
     original_route_data = []
 
     if original_segment and len(original_segment) > 1:
@@ -416,7 +415,8 @@ def simulate_traffic():
     # Compute an alternative route using the nearest neighbor node of the destination
     avoid_edges = set((original_segment[i], original_segment[i + 1]) for i in range(len(original_segment) - 1))
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
-    alternative_segment = a_star_search(G_simulated, start_node, neighbor_node, avoid_edges)
+    alternative_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node, avoid_edges)
+    # alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_edges)
     alternative_route_data = []
     alt_total_distance = 0
     alt_total_time = 0
