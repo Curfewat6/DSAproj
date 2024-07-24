@@ -180,7 +180,9 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 @app.route('/')
 def index():
     print(G)
+    print("[*]Clearing sessions...")
     session.clear()
+    print("[+]Sessions cleared successfully :D")
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
