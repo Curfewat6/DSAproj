@@ -53,7 +53,12 @@
         var routeSegments = {{ route_segments|tojson }};
         var start_coords = {{ start_coords|tojson }};
         var destination_coords = {{ destination_coords|tojson }};
-        
+
+        console.log("Start coordinates:", start_coords);
+        console.log("End coordinates:", {{ end_coords|tojson }});
+        console.log("Route segments:", routeSegments);
+        console.log("Destination coordinates:", destination_coords);
+
         // Add markers for start and destinations
         var greenIcon = new L.Icon({
             iconUrl: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
@@ -78,6 +83,7 @@
             var latlngs = segment.map(function(coord) {
                 return [coord[0], coord[1]];
             });
+            console.log("Plotting segment:", latlngs);
             L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
         });
 
@@ -96,6 +102,7 @@
                     var latlngs = segment.coords.map(function(coord) {
                         return [coord[0], coord[1]];
                     });
+                    console.log("Plotting simulated heavy traffic segment:", latlngs);
                     L.polyline(latlngs, { color: 'red', weight: 5, opacity: 0.8 }).addTo(map);
                 });
 
@@ -104,6 +111,7 @@
                     var latlngs = segment.coords.map(function(coord) {
                         return [coord[0], coord[1]];
                     });
+                    console.log("Plotting alternative segment:", latlngs);
                     L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
                 });
 

@@ -1,4 +1,5 @@
 import heapq
+import pickle
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
@@ -105,7 +106,7 @@ def update_edge_weights(graph, traffic_data):
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
 
-# Function to simulate high traffic between Ubi and Bishan
+# Function to simulate high traffic
 def simulate_high_traffic(graph, start_coords, end_coords):
     graph_copy = graph.copy()
     start_node = get_nearest_node(graph_copy, start_coords)
@@ -170,11 +171,16 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
             nearest_neighbor = neighbor
 
     return nearest_neighbor
+# @app.route('/clear_session')
+# def clear_session():
+#     session.clear()
+#     return redirect(url_for('/'))  # Redirect to the index page after clearing the session
 
 #Step 1 , user input form
 @app.route('/')
 def index():
     print(G)
+    session.clear()
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
@@ -222,30 +228,17 @@ def generate_order():
     counter = session.get('counter')
     mapper = {}
 
-    # Retrieve info from session
     start_coords = session.get('lcoords0')
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    destination_coords.pop()    # Just a quick fix 
+    destination_coords.pop()
 
-    # Tag the ID to each coordinate
     for i in range(counter+1):
         identifier = session.get(f'{i}')
         mapper[identifier] = session.get(f'lcoords{i}')
         
-    # Fetch LTA traffic data and update edge weights
-    # api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
-    # traffic_data = fetch_traffic_flow_data(api_key)
-    # if traffic_data:
-    #     update_edge_weights(G, traffic_data)
-    # else:
-    #     print("Failed to fetch or update traffic data")
-
-    # Call the nearest neighbor function from dij.py
-    order_from_dij, mapped , nodecount_segment_dij= dij.main(start_coords, destination_coords, mapper, G)
+    order_from_dij, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
     
     reversed_mapper = {coords: id for id, coords in mapped.items()}
-    print(mapper)
-    # Initialize an empty list to store the sorted IDs
     sorted_ids = [0]
     for tup in order_from_dij:
         coords = (tup[2], tup[3])
@@ -254,37 +247,31 @@ def generate_order():
 
     session['sorted_ids'] = sorted_ids
 
-    # Precompute routes
     precomputed_routes = []
-    nodecount_segment_astar=[]
-    for i in range(len(sorted_ids)   - 1):
+    nodecount_segment_astar = []
+    for i in range(len(sorted_ids)- 1):
         start_id = sorted_ids[i]
         end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
-        segment,node_count = a_star_search(G, start_node, end_node)
+        segment, node_count = a_star_search(G, start_node, end_node)
         nodecount_segment_astar.append(node_count)
         precomputed_routes.append(segment)
     
     session['precomputed_routes'] = precomputed_routes
-    
-    # Precompute the entire route
+
+    total_time_taken = 0
+    total_distance_travelled = 0
     entire_route_segments = []
-    total_distance = 0
-    total_time = 0
+
     for segment in precomputed_routes:
         if segment:
             segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
             entire_route_segments.append(segment_coords)
 
             segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
-            total_distance += segment_distance
-            total_time += segment_time
-
-    session['entire_route_segments'] = entire_route_segments
-    session['total_distance'] = total_distance
-    session['total_time'] = total_time
-
+            total_distance_travelled += segment_distance
+            total_time_taken += segment_time
 
     ordered_data = []
     total_distance = 0
@@ -303,20 +290,20 @@ def generate_order():
             'index': i + 1,
             'segment_distance': round(segment_distance, 2),
             'segment_time': round(segment_time, 2),
-            # 'dij_segment_distance': round(dij_segment_distance, 2), 
-            # 'dij_segment_time': round(dij_segment_time, 2)
             'number_of_nodes_dij': nodecount_segment_dij[i],
             'number_of_nodes_astar': nodecount_segment_astar[i]
-
         })
     
+    session['sorted_ids'] = tuple(sorted_ids)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
+
 
 #step 4, based on the order given, plot the route
 @app.route('/plot', methods=['POST'])
 def plot():
     target = int(request.form['step_number'])  # Get the step number
     session['target'] = target
+    
     sorted_ids = session.get('sorted_ids')
     counter = session.get('counter')    
     precomputed_routes = session.get('precomputed_routes')
@@ -325,15 +312,7 @@ def plot():
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
     destination_coords.pop()  # Just a quick fix
 
-    # Get the specific segment based on the target step number
-    if target == 1:
-        segment = precomputed_routes[0]
-    else:
-        print(target)
-        flow = target - 1
-        print(flow)
-        print(len(precomputed_routes))
-        segment = precomputed_routes[flow]
+    segment = precomputed_routes[target - 1]
 
     route_segments = []
     total_distance = 0
@@ -346,41 +325,13 @@ def plot():
         segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
         total_distance += segment_distance
         total_time += segment_time
-        
+
     start_address = session.get(f'address{sorted_ids[target-1]}')
     end_address = session.get(f'address{sorted_ids[target]}')
     start_coords = session.get(f'lcoords{sorted_ids[target-1]}')
     end_coords = session.get(f'lcoords{sorted_ids[target]}')
 
     return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
-
-@app.route('/plot_entire_route', methods=['POST'])
-def plot_entire_route():
-    entire_route_segments = session.get('entire_route_segments')
-    counter = session.get('counter')
-
-    start_coords = session.get('lcoords0')
-    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    destination_coords.pop()  # Just a quick fix
-
-    total_distance = session.get('total_distance')
-    total_time = session.get('total_time')
-
-    # Ensure total_distance and total_time are not None
-    if total_distance is None:
-        total_distance = 0
-    if total_time is None:
-        total_time = 0
-
-        
-    start_address = session.get('address0')
-    end_address = session.get(f'address{counter}')
-    start_coords = session.get(f'lcoords0')
-    end_coords = session.get(f'lcoords{counter}')
-
-    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance, total_time=total_time, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance, 2), segment_time=round(total_time, 2), entire_route=True)
-
-
 
 @app.route('/simulate_traffic')
 def simulate_traffic():

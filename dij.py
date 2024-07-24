@@ -153,8 +153,8 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
-        print("BEFORE REMOVING")
-        print(end_nodes)
+        # print("BEFORE REMOVING")
+        # print(end_nodes)
         number_of_nodes, current_node = nearest_neighbor(graph, start_node, end_nodes)
         #dij_precomputed_route.append(path)
         nodecount_segment.append(number_of_nodes)
@@ -162,8 +162,8 @@ def main(start_coords, destination_coords, mapped_coords ,G):
         start_node = current_node
         
         end_nodes.remove(current_node)
-        print("AFTER REMOVING")
-        print(end_nodes)
+        # print("AFTER REMOVING")
+        # print(end_nodes)
     return order_dij, mapped_coords, nodecount_segment
 
 if __name__ == "__main__":
