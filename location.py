@@ -1,6 +1,4 @@
 import requests
-import random
-
 MAX_TRY = 5
 
 def fetch_address_data(address):

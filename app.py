@@ -171,14 +171,16 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
             nearest_neighbor = neighbor
 
     return nearest_neighbor
-# @app.route('/clear_session')
-# def clear_session():
-#     session.clear()
-#     return redirect(url_for('/'))  # Redirect to the index page after clearing the session
 
-#Step 1 , user input form
+# FLASK APP
 @app.route('/')
 def index():
+    """
+    Step 1: User will be directed a form to fill in the locations to visit
+    
+    This will lead to form.html
+    This function will clear the session to drop previous data to prevent overlapping
+    """
     print(G)
     print("[*]Clearing sessions...")
     session.clear()
@@ -189,6 +191,12 @@ def index():
 #results is shown in results.html
 @app.route('/checkAddress', methods=['POST'])
 def check_address():
+    """
+    Step 2, from user input form to this function , use location.py to check for the coordinates
+    
+    This endpoint will lead to results.html
+    This function will run levenstein algorithm and convert the addresses to coordinates
+    """
     counter = 0
     start_location = request.form['startLocation']
     num_destinations = int(request.form['numDestinations'])
@@ -222,14 +230,20 @@ def check_address():
     # You can redirect to another page or render a template with the results
     return render_template('results.html', start_data=start_data, destination_data=destination_data)
     
-
-#step 3, from result.html, user click generate will come to this function to user dij.py to generate the order
-#results is shown in results.html
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
+    """
+    Step 3: from result.html, user click generate will come to this function to user dij.py to generate the order
+    
+    This function generates the order of locations to visit first using dijkstra
+    This endpoint will lead to order.html
+    """
+    # Initialise variables
+    global total_distance_travelled
+    global total_time_taken
+    global entire_route_segments
     counter = session.get('counter')
     mapper = {}
-
     start_coords = session.get('lcoords0')
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
     destination_coords.pop()
@@ -296,13 +310,16 @@ def generate_order():
             'number_of_nodes_astar': nodecount_segment_astar[i]
         })
     
-    session['sorted_ids'] = tuple(sorted_ids)
+    
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
-
-#step 4, based on the order given, plot the route
 @app.route('/plot', methods=['POST'])
 def plot():
+    """
+    Step 4: based on the order given, plot the route
+    
+    This function will plot the segmented route based on the precomputed routes as specified
+    """
     target = int(request.form['step_number'])  # Get the step number
     session['target'] = target
     
@@ -335,6 +352,31 @@ def plot():
 
     return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
 
+@app.route('/plot_entire_route', methods=['POST'])
+def plot_entire_route():
+    counter = session.get('counter')
+    global entire_route_segments
+    global total_distance_travelled
+    global total_time_taken
+
+    start_coords = session.get('lcoords0')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()  # Just a quick fix
+
+    # Ensure total_distance and total_time are not None
+    if total_distance_travelled is None:
+        total_distance_travelled = 0
+    if total_time_taken is None:
+        total_time_taken = 0
+
+        
+    start_address = session.get('address0')
+    end_address = session.get(f'address{counter}')
+    start_coords = session.get(f'lcoords0')
+    end_coords = session.get(f'lcoords{counter}')
+
+    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance_travelled, total_time=total_time_taken, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance_travelled, 2), segment_time=round(total_time_taken, 2), entire_route=True)
+
 @app.route('/simulate_traffic')
 def simulate_traffic():
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
@@ -362,6 +404,8 @@ def simulate_traffic():
     original_route_data = []
 
     if original_segment and len(original_segment) > 1:
+        print(original_segment)
+        print(type(original_segment))
         segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
         original_route_data.append({'coords': segment_coords, 'color': 'red'})
         
