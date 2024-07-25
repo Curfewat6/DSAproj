@@ -285,6 +285,9 @@ def check_address():
     return render_template('results.html', start_data=start_data, destination_data=destination_data)
 
 def compute_routes(sorted_ids, order):
+    """
+    This function runs A* algorithm with a specified order given by the parameter
+    """
     global total_distance_travelled
     global total_time_taken
     global entire_route_segments
@@ -346,6 +349,7 @@ def compute_routes(sorted_ids, order):
             # 'number_of_nodes_dij': nodecount_segment_dij[i],
             # 'number_of_nodes_astar': nodecount_segment_astar[i]
         })
+        
     return ordered_data, total_distance, total_time
 
 @app.route('/generate_order', methods=['POST'])
@@ -410,6 +414,7 @@ def generate_order():
 
         session['sorted_ids'] = sorted_ids
         order = tuple(sorted_ids)
+
     ordered_data, total_distance, total_time = compute_routes(sorted_ids, order)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
