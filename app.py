@@ -6,6 +6,8 @@ import requests
 from flask import Flask, jsonify, render_template, request,redirect, url_for, session
 import dij
 import aco
+import pandas as pd
+import json
 import location
 
 app = Flask(__name__)
@@ -13,6 +15,41 @@ app = Flask(__name__)
 # Load the graph from OpenStreetMap
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
+
+#Function to fetch lta data for traffic incident 
+def fetch_traffic_incident(G):
+    url = "http://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
+    payload = {}
+    headers = {
+        'AccountKey': '8RW2GbiGRDK2ND8dY9n29g=='
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    response_text = response.text
+
+    # Parse the response text into a JSON object
+    data = json.loads(response_text)
+
+    # Extract type, latitude, and longitude
+    extracted_data = []
+    for item in data['value']:  # Assuming the relevant data is under the 'value' key
+        extracted_data.append({
+            'Type': item['Type'],
+            'Latitude': item['Latitude'],
+            'Longitude': item['Longitude']
+        })
+
+    # Create a DataFrame
+    df = pd.DataFrame(extracted_data)
+
+    # Convert latitude and longitude to nodes
+    df['Node'] = df.apply(lambda row: ox.distance.nearest_nodes(G, row['Longitude'], row['Latitude']), axis=1)
+
+    # Save to Excel
+    df.to_excel('traffic_incident.xlsx', index=False)
+
+
+
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
@@ -189,6 +226,9 @@ def index():
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
+    print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
+    fetch_traffic_incident(G)
+    print("[+]Traffic incident fetched successfully :D")
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
