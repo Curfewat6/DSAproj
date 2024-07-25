@@ -227,7 +227,7 @@ def index():
     session.clear()
     print("[+]Sessions cleared successfully :D")
     print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
-    fetch_traffic_incident(G)
+    fetch_traffic_incident(G)   
     print("[+]Traffic incident fetched successfully :D")
     return render_template('form.html')
 
