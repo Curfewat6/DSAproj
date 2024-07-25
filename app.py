@@ -410,57 +410,6 @@ def generate_order():
 
         session['sorted_ids'] = sorted_ids
         order = tuple(sorted_ids)
-    # precomputed_routes = []
-    # nodecount_segment_astar = []
-    # start = time.time()
-    # for i in range(len(sorted_ids)- 1):
-    #     start_id = sorted_ids[i]
-    #     end_id = sorted_ids[i + 1]
-    #     start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
-    #     end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
-    #     segment, node_count = a_star_search(G, start_node, end_node)
-        
-        
-    #     nodecount_segment_astar.append(node_count)
-    #     precomputed_routes.append(segment)
-    # end = time.time()
-    # print(f"[*] A* took {(end - start):.3f} seconds")
-    
-    # session['precomputed_routes'] = precomputed_routes
-    
-    # total_time_taken = 0
-    # total_distance_travelled = 0
-    # entire_route_segments = []
-
-    # for segment in precomputed_routes:
-    #     if segment:
-    #         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
-    #         entire_route_segments.append(segment_coords)
-
-    #         segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
-    #         total_distance_travelled += segment_distance
-    #         total_time_taken += segment_time
-
-    # ordered_data = []
-    # total_distance = 0
-    # total_time = 0
-    # for i, coord in enumerate(order_from_dij):
-    #     start_id = sorted_ids[i]
-    #     end_id = sorted_ids[i + 1]
-    #     segment_distance, segment_time = calculate_route_distance_and_time(precomputed_routes[i], G)
-    #     total_distance += segment_distance
-    #     total_time += segment_time
-    #     ordered_data.append({
-    #         'start': session.get(f'lcoords{sorted_ids[i]}'),
-    #         'end': session.get(f'lcoords{sorted_ids[i+1]}'),
-    #         'start_address': session.get(f'address{sorted_ids[i]}'),
-    #         'end_address': session.get(f'address{sorted_ids[i+1]}'),
-    #         'index': i + 1,
-    #         'segment_distance': round(segment_distance, 2),
-    #         'segment_time': round(segment_time, 2),
-    #         'number_of_nodes_dij': nodecount_segment_dij[i],
-    #         'number_of_nodes_astar': nodecount_segment_astar[i]
-    #     })
     ordered_data, total_distance, total_time = compute_routes(sorted_ids, order)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
