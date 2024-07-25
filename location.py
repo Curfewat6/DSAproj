@@ -72,7 +72,7 @@ def find_best_match_address(query):
     original_query = query
     attempts = 0
     max_attempts = MAX_TRY * 3  # 3 different ways to broaden query
-
+    print("[-] Squashed levenstein print statement...")
     while attempts < max_attempts:
         broaden_attempt = (attempts % 3) + 1
         data = fetch_address_data(query)
@@ -82,7 +82,7 @@ def find_best_match_address(query):
             if match:
                 best_match_address = match[0]
                 confidence_score = match[1]
-                print(f"Best match: {best_match_address}\nConfidence: {confidence_score}%")
+                #print(f"Best match: {best_match_address}\nConfidence: {confidence_score}%")
                 for result in data['results']:
                     if result['ADDRESS'] == best_match_address:
                         return result
@@ -108,8 +108,6 @@ def find_best_match_address(query):
 def addr2coord(address):
     match_result = find_best_match_address(address)
     if match_result:
-        print(f"[+] Address found: {match_result['ADDRESS']}")
-        print(f"[+] Coordinates found: {match_result['LATITUDE']}, {match_result['LONGITUDE']}\n")
         return {
             'address': match_result['ADDRESS'],
             'coords': (round(float(match_result['LATITUDE']), 4), round(float(match_result['LONGITUDE']), 4)),

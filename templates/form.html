@@ -55,6 +55,15 @@
                     <option value="10">10</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label for="algorithm_code">Type of algorithm:</label>
+                <select class="form-control" id="algorithm_code" name="algorithm_code" onchange="createDestinationInputs()" required>
+                    <option value="" disabled selected>Choose an algorithm</option>
+                    <option value="1">brutefore (dij) [order]+ A* [path finding]"</option>
+                    <option value="2">nearest neighbour (dij) [order]+ a* [pathfinding]</option>
+                    <option value="3">Modified A* Algorithm (aco)[order] + A* [pathfinding]</option>
+                </select>
+            </div>
             <div id="destinationInputs"></div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>

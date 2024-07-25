@@ -16,9 +16,6 @@ app = Flask(__name__)
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
 
-
-
-
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
     return ox.distance.nearest_nodes(graph, point[1], point[0])
@@ -164,7 +161,6 @@ def calculate_route_distance_and_time(route, graph):
 
     return total_distance, total_time
 
-
 def get_nearest_neighbor_node(graph, node, exclude_node):
     nearest_neighbor = None
     min_distance = float('inf')
@@ -179,7 +175,6 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
             nearest_neighbor = neighbor
 
     return nearest_neighbor
-
 
 #Function to fetch lta data for traffic incident 
 def fetch_traffic_incident(G):
@@ -257,6 +252,8 @@ def check_address():
     counter = 0
     start_location = request.form['startLocation']
     num_destinations = int(request.form['numDestinations'])
+    algo_type = int(request.form['algorithm_code'])
+    session['algo_type'] = algo_type
     
     destinations = []
     for i in range(num_destinations):   
@@ -287,79 +284,21 @@ def check_address():
     # You can redirect to another page or render a template with the results
     return render_template('results.html', start_data=start_data, destination_data=destination_data)
 
-
-
-
-@app.route('/generate_order', methods=['POST'])
-def generate_order():
-    """
-    Step 3: from result.html, user click generate will come to this function to user dij.py to generate the order
-    
-    This function generates the order of locations to visit first using dijkstra
-    This endpoint will lead to order.html
-    """
-
-    # To compare the nearest neighbour to the brute force 
-    #comparison(start_coords,destination_coords,G)
-
-    # Initialise variables
+def compute_routes(sorted_ids, order):
     global total_distance_travelled
     global total_time_taken
     global entire_route_segments
-    counter = session.get('counter')
-    mapper = {}
     
-    start_coords = session.get('lcoords0')
-    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    destination_coords.pop()
-
-    for i in range(counter+1):
-        identifier = session.get(f'{i}')
-        mapper[identifier] = session.get(f'lcoords{i}')
-    print(f"MAPPER: {mapper}")
-    # Dijkstra's estimated TSP optimization
-    start = time.time()
-    order_from_dij, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
-    end = time.time()
-
-    print(f"[*] Dijkstra took {(end - start):.3f} seconds\n")
-    
-    reversed_mapper = {coords: id for id, coords in mapped.items()}
-    sorted_ids = [0]
-    for tup in order_from_dij:
-        coords = (tup[2], tup[3])
-        if coords in reversed_mapper:
-            sorted_ids.append(reversed_mapper[coords])
-
-    # session['sorted_ids'] = sorted_ids
-
-
-    # Ant Colony's TSP optimization
-    start = time.time()
-    order_from_aco = aco.optimise_results(mapper)
-    end = time.time()
-    print(order_from_aco)
-    print(type(order_from_aco))
-    print(f"[*] Ant Colony took {(end - start):.3f} seconds (550 ants, 500 iterations)\n")
-
-    session['sorted_ids'] = order_from_aco
-
     precomputed_routes = []
     nodecount_segment_astar = []
     start = time.time()
-    # for i in range(len(sorted_ids)- 1):
-    #     start_id = sorted_ids[i]
-    #     end_id = sorted_ids[i + 1]
-    #     start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
-    #     end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
-    #     segment, node_count = a_star_search(G, start_node, end_node)
-        
-        
-    #     nodecount_segment_astar.append(node_count)
-    #     precomputed_routes.append(segment)
-    for i in range(len(order_from_aco)- 1):
-        start_id = order_from_aco[i]
-        end_id = order_from_aco[i + 1]
+    if type(order) == tuple:
+        iterations = len(order) - 1
+    else:
+        iterations = len(order)
+    for i in range(len(sorted_ids)- 1):
+        start_id = sorted_ids[i]
+        end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
         segment, node_count = a_star_search(G, start_node, end_node)
@@ -388,36 +327,141 @@ def generate_order():
     ordered_data = []
     total_distance = 0
     total_time = 0
-    for i, coord in enumerate(order_from_dij):
-        # start_id = sorted_ids[i]
-        # end_id = sorted_ids[i + 1]
-        start_id = order_from_aco[i]
-        end_id = order_from_aco[i + 1]
+    print(order)
+
+    for i in range(iterations):
+        start_id = sorted_ids[i]
+        end_id = sorted_ids[i + 1]
         segment_distance, segment_time = calculate_route_distance_and_time(precomputed_routes[i], G)
         total_distance += segment_distance
         total_time += segment_time
-        # ordered_data.append({
-        #     'start': session.get(f'lcoords{sorted_ids[i]}'),
-        #     'end': session.get(f'lcoords{sorted_ids[i+1]}'),
-        #     'start_address': session.get(f'address{sorted_ids[i]}'),
-        #     'end_address': session.get(f'address{sorted_ids[i+1]}'),
-        #     'index': i + 1,
-        #     'segment_distance': round(segment_distance, 2),
-        #     'segment_time': round(segment_time, 2),
-        #     'number_of_nodes_dij': nodecount_segment_dij[i],
-        #     'number_of_nodes_astar': nodecount_segment_astar[i]
-        # })
         ordered_data.append({
-            'start': session.get(f'lcoords{order_from_aco[i]}'),
-            'end': session.get(f'lcoords{order_from_aco[i+1]}'),
-            'start_address': session.get(f'address{order_from_aco[i]}'),
-            'end_address': session.get(f'address{order_from_aco[i+1]}'),
+            'start': session.get(f'lcoords{sorted_ids[i]}'),
+            'end': session.get(f'lcoords{sorted_ids[i+1]}'),
+            'start_address': session.get(f'address{sorted_ids[i]}'),
+            'end_address': session.get(f'address{sorted_ids[i+1]}'),
             'index': i + 1,
             'segment_distance': round(segment_distance, 2),
             'segment_time': round(segment_time, 2),
-            'number_of_nodes_dij': nodecount_segment_dij[i],
-            'number_of_nodes_astar': nodecount_segment_astar[i]
+            # 'number_of_nodes_dij': nodecount_segment_dij[i],
+            # 'number_of_nodes_astar': nodecount_segment_astar[i]
         })
+    return ordered_data, total_distance, total_time
+
+@app.route('/generate_order', methods=['POST'])
+def generate_order():
+    """
+    Step 3: from result.html, user click generate will come to this function to user dij.py to generate the order
+    
+    This function generates the order of locations to visit first using dijkstra
+    This endpoint will lead to order.html
+    """
+
+    # To compare the nearest neighbour to the brute force 
+    #comparison(start_coords,destination_coords,G)
+
+    # Initialise variables
+    counter = session.get('counter')
+    algo_type = session.get('algo_type')
+    mapper = {}
+    start_coords = session.get('lcoords0')
+    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords.pop()
+
+    for i in range(counter+1):
+        identifier = session.get(f'{i}')
+        mapper[identifier] = session.get(f'lcoords{i}')
+    print(f"MAPPER: {mapper}")
+
+    if algo_type == 1:
+        # Brute force dijkstra TSP optimization Option 1
+        start = time.time()
+        
+        # Code here #
+
+
+        end = time.time()
+        print(f"[*] Dijkstra brute force took {(end - start):.3f} seconds!\n")
+
+    elif algo_type == 2:
+        # Dijkstra's estimated TSP optimization Option 2
+        start = time.time()
+        order, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
+        end = time.time()
+
+        print(f"[*] Dijkstra took {(end - start):.3f} seconds!\n")
+        
+        reversed_mapper = {coords: id for id, coords in mapped.items()}
+        sorted_ids = [0]
+        for tup in order:
+            coords = (tup[2], tup[3])
+            if coords in reversed_mapper:
+                sorted_ids.append(reversed_mapper[coords])
+
+        session['sorted_ids'] = sorted_ids
+
+    elif algo_type == 3:
+
+        # Ant Colony's TSP optimization Option 2
+        start = time.time()
+        sorted_ids = aco.optimise_results(mapper)
+        end = time.time()
+        print(f"[*] Ant Colony took {(end - start):.3f} seconds! (550 ants, 500 iterations)\n")
+
+        session['sorted_ids'] = sorted_ids
+        order = tuple(sorted_ids)
+    # precomputed_routes = []
+    # nodecount_segment_astar = []
+    # start = time.time()
+    # for i in range(len(sorted_ids)- 1):
+    #     start_id = sorted_ids[i]
+    #     end_id = sorted_ids[i + 1]
+    #     start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
+    #     end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
+    #     segment, node_count = a_star_search(G, start_node, end_node)
+        
+        
+    #     nodecount_segment_astar.append(node_count)
+    #     precomputed_routes.append(segment)
+    # end = time.time()
+    # print(f"[*] A* took {(end - start):.3f} seconds")
+    
+    # session['precomputed_routes'] = precomputed_routes
+    
+    # total_time_taken = 0
+    # total_distance_travelled = 0
+    # entire_route_segments = []
+
+    # for segment in precomputed_routes:
+    #     if segment:
+    #         segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in segment]
+    #         entire_route_segments.append(segment_coords)
+
+    #         segment_distance, segment_time = calculate_route_distance_and_time(segment, G)
+    #         total_distance_travelled += segment_distance
+    #         total_time_taken += segment_time
+
+    # ordered_data = []
+    # total_distance = 0
+    # total_time = 0
+    # for i, coord in enumerate(order_from_dij):
+    #     start_id = sorted_ids[i]
+    #     end_id = sorted_ids[i + 1]
+    #     segment_distance, segment_time = calculate_route_distance_and_time(precomputed_routes[i], G)
+    #     total_distance += segment_distance
+    #     total_time += segment_time
+    #     ordered_data.append({
+    #         'start': session.get(f'lcoords{sorted_ids[i]}'),
+    #         'end': session.get(f'lcoords{sorted_ids[i+1]}'),
+    #         'start_address': session.get(f'address{sorted_ids[i]}'),
+    #         'end_address': session.get(f'address{sorted_ids[i+1]}'),
+    #         'index': i + 1,
+    #         'segment_distance': round(segment_distance, 2),
+    #         'segment_time': round(segment_time, 2),
+    #         'number_of_nodes_dij': nodecount_segment_dij[i],
+    #         'number_of_nodes_astar': nodecount_segment_astar[i]
+    #     })
+    ordered_data, total_distance, total_time = compute_routes(sorted_ids, order)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
 @app.route('/plot', methods=['POST'])
