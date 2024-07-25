@@ -108,6 +108,8 @@ def find_best_match_address(query):
 def addr2coord(address):
     match_result = find_best_match_address(address)
     if match_result:
+        print(f"[+] Address found: {match_result['ADDRESS']}")
+        print(f"[+] Coordinates found: {match_result['LATITUDE']}, {match_result['LONGITUDE']}\n")
         return {
             'address': match_result['ADDRESS'],
             'coords': (round(float(match_result['LATITUDE']), 4), round(float(match_result['LONGITUDE']), 4)),

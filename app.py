@@ -301,6 +301,7 @@ def generate_order():
     global entire_route_segments
     counter = session.get('counter')
     mapper = {}
+    
     start_coords = session.get('lcoords0')
     destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
     destination_coords.pop()
@@ -308,13 +309,14 @@ def generate_order():
     for i in range(counter+1):
         identifier = session.get(f'{i}')
         mapper[identifier] = session.get(f'lcoords{i}')
-
+    print(f"MAPPER: {mapper}")
+    # Dijkstra's estimated TSP optimization
     start = time.time()
     order_from_dij, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
     end = time.time()
 
     print(f"[*] Dijkstra took {(end - start):.3f} seconds\n")
-
+    
     reversed_mapper = {coords: id for id, coords in mapped.items()}
     sorted_ids = [0]
     for tup in order_from_dij:
@@ -322,14 +324,35 @@ def generate_order():
         if coords in reversed_mapper:
             sorted_ids.append(reversed_mapper[coords])
 
-    session['sorted_ids'] = sorted_ids
+    # session['sorted_ids'] = sorted_ids
+
+
+    # Ant Colony's TSP optimization
+    start = time.time()
+    order_from_aco = aco.optimise_results(mapper)
+    end = time.time()
+    print(order_from_aco)
+    print(type(order_from_aco))
+    print(f"[*] Ant Colony took {(end - start):.3f} seconds (550 ants, 500 iterations)\n")
+
+    session['sorted_ids'] = order_from_aco
 
     precomputed_routes = []
     nodecount_segment_astar = []
     start = time.time()
-    for i in range(len(sorted_ids)- 1):
-        start_id = sorted_ids[i]
-        end_id = sorted_ids[i + 1]
+    # for i in range(len(sorted_ids)- 1):
+    #     start_id = sorted_ids[i]
+    #     end_id = sorted_ids[i + 1]
+    #     start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
+    #     end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
+    #     segment, node_count = a_star_search(G, start_node, end_node)
+        
+        
+    #     nodecount_segment_astar.append(node_count)
+    #     precomputed_routes.append(segment)
+    for i in range(len(order_from_aco)- 1):
+        start_id = order_from_aco[i]
+        end_id = order_from_aco[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
         segment, node_count = a_star_search(G, start_node, end_node)
@@ -337,10 +360,10 @@ def generate_order():
         
         nodecount_segment_astar.append(node_count)
         precomputed_routes.append(segment)
-    
-    session['precomputed_routes'] = precomputed_routes
     end = time.time()
     print(f"[*] A* took {(end - start):.3f} seconds")
+    
+    session['precomputed_routes'] = precomputed_routes
     
     total_time_taken = 0
     total_distance_travelled = 0
@@ -359,16 +382,29 @@ def generate_order():
     total_distance = 0
     total_time = 0
     for i, coord in enumerate(order_from_dij):
-        start_id = sorted_ids[i]
-        end_id = sorted_ids[i + 1]
+        # start_id = sorted_ids[i]
+        # end_id = sorted_ids[i + 1]
+        start_id = order_from_aco[i]
+        end_id = order_from_aco[i + 1]
         segment_distance, segment_time = calculate_route_distance_and_time(precomputed_routes[i], G)
         total_distance += segment_distance
         total_time += segment_time
+        # ordered_data.append({
+        #     'start': session.get(f'lcoords{sorted_ids[i]}'),
+        #     'end': session.get(f'lcoords{sorted_ids[i+1]}'),
+        #     'start_address': session.get(f'address{sorted_ids[i]}'),
+        #     'end_address': session.get(f'address{sorted_ids[i+1]}'),
+        #     'index': i + 1,
+        #     'segment_distance': round(segment_distance, 2),
+        #     'segment_time': round(segment_time, 2),
+        #     'number_of_nodes_dij': nodecount_segment_dij[i],
+        #     'number_of_nodes_astar': nodecount_segment_astar[i]
+        # })
         ordered_data.append({
-            'start': session.get(f'lcoords{sorted_ids[i]}'),
-            'end': session.get(f'lcoords{sorted_ids[i+1]}'),
-            'start_address': session.get(f'address{sorted_ids[i]}'),
-            'end_address': session.get(f'address{sorted_ids[i+1]}'),
+            'start': session.get(f'lcoords{order_from_aco[i]}'),
+            'end': session.get(f'lcoords{order_from_aco[i+1]}'),
+            'start_address': session.get(f'address{order_from_aco[i]}'),
+            'end_address': session.get(f'address{order_from_aco[i+1]}'),
             'index': i + 1,
             'segment_distance': round(segment_distance, 2),
             'segment_time': round(segment_time, 2),
