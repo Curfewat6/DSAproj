@@ -9,6 +9,7 @@ import pandas as pd
 import json
 import location
 import time
+import bruteforce
 
 app = Flask(__name__)
 
@@ -234,9 +235,9 @@ def index():
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
-    print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
-    fetch_traffic_incident(G)   
-    print("[+]Traffic incident fetched successfully :D")
+    # print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
+    # fetch_traffic_incident(G)   
+    # print("[+]Traffic incident fetched successfully :D")
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
@@ -380,12 +381,11 @@ def generate_order():
     if algo_type == 1:
         # Brute force dijkstra TSP optimization Option 1
         start = time.time()
-        
+
         # Code here #
-
-
+        order , sorted_ids= bruteforce.main(start_coords, destination_coords, mapper, G)
         end = time.time()
-        print(f"[*] Dijkstra brute force took {(end - start):.3f} seconds!\n")
+        print(f"[*] Dijkstra - Brute Force took {(end - start):.3f} seconds!\n")
 
     elif algo_type == 2:
         # Dijkstra's estimated TSP optimization Option 2
@@ -393,7 +393,7 @@ def generate_order():
         order, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
         end = time.time()
 
-        print(f"[*] Dijkstra took {(end - start):.3f} seconds!\n")
+        print(f"[*] Dijkstra - Nearest Neighbour took {(end - start):.3f} seconds!\n")
         
         reversed_mapper = {coords: id for id, coords in mapped.items()}
         sorted_ids = [0]
@@ -415,6 +415,8 @@ def generate_order():
         session['sorted_ids'] = sorted_ids
         order = tuple(sorted_ids)
 
+    print ("Order is : ", order)
+    print("Sorted IDS: ", sorted_ids)
     ordered_data, total_distance, total_time = compute_routes(sorted_ids, order)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
@@ -516,8 +518,6 @@ def simulate_traffic():
         print("Original segment not found")
 
 
-    
-        
     # Fetch LTA traffic data and update edge weights
     # Maybe these 2 function below causing the infinite printing of nothing, so i try commment it out
     # traffic_data = fetch_traffic_flow_data(api_key)
@@ -527,17 +527,21 @@ def simulate_traffic():
     # This will return a list of nodes that are in the traffic incident and assign it to avoid_nodes
 
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
-    avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
-    # if original_segment and len(original_segment) > 1:
-    #     avoid_nodes.update(original_segment[:1])
-    # elif original_segment:
-    #     avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
-    if avoid_nodes:
-        print("Avoid nodes:", avoid_nodes)
-        #if there are avoid nodes, run astar again and avoid the node
-    else:
-        print("No nodes to avoid in this segment")
-        #else no nodes to avoid then just do nth 
+    #avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
+
+    avoid_nodes =set()
+    if original_segment and len(original_segment) > 1:
+        avoid_nodes.update(original_segment[:1])
+    elif original_segment:
+        avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
+
+
+    # if avoid_nodes:
+    #     print("Avoid nodes:", avoid_nodes)
+    #     #if there are avoid nodes, run astar again and avoid the node
+    # else:
+    #     print("No nodes to avoid in this segment")
+    #     #else no nodes to avoid then just do nth 
     # Compute an alternative route avoiding the first 10 nodes in the original segment
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
     alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
