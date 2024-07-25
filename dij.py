@@ -1,10 +1,6 @@
 import os
 import osmnx as ox
-import networkx as nx
-import folium
-from itertools import permutations
 import heapq
-import location
 
 def downloadOSMX():
     graph_name = "singapore.graphml"

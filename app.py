@@ -1,5 +1,4 @@
 import heapq
-import pickle
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
@@ -7,6 +6,7 @@ from flask import Flask, jsonify, render_template, request,redirect, url_for, se
 import dij
 import aco
 import location
+import time
 
 app = Flask(__name__)
 
@@ -101,7 +101,6 @@ def update_edge_weights(graph, traffic_data):
             speed_band = float(segment['SpeedBand'])
             # print("Speed band is:")
             # print(segment['SpeedBand'])
-            print()
             if start_node in graph and end_node in graph[start_node]:
                 length = graph[start_node][end_node][0]['length'] / 1000  # Convert to km
                 travel_time = length / speed_band  # Time in hours
@@ -255,9 +254,13 @@ def generate_order():
     for i in range(counter+1):
         identifier = session.get(f'{i}')
         mapper[identifier] = session.get(f'lcoords{i}')
-        
+
+    start = time.time()
     order_from_dij, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
-    
+    end = time.time()
+
+    print(f"[*] Dijkstra took {(end - start):.3f} seconds\n")
+
     reversed_mapper = {coords: id for id, coords in mapped.items()}
     sorted_ids = [0]
     for tup in order_from_dij:
@@ -269,17 +272,22 @@ def generate_order():
 
     precomputed_routes = []
     nodecount_segment_astar = []
+    start = time.time()
     for i in range(len(sorted_ids)- 1):
         start_id = sorted_ids[i]
         end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
         segment, node_count = a_star_search(G, start_node, end_node)
+        
+        
         nodecount_segment_astar.append(node_count)
         precomputed_routes.append(segment)
     
     session['precomputed_routes'] = precomputed_routes
-
+    end = time.time()
+    print(f"[*] A* took {(end - start):.3f} seconds")
+    
     total_time_taken = 0
     total_distance_travelled = 0
     entire_route_segments = []
@@ -313,8 +321,6 @@ def generate_order():
             'number_of_nodes_dij': nodecount_segment_dij[i],
             'number_of_nodes_astar': nodecount_segment_astar[i]
         })
-    
-    
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
 @app.route('/plot', methods=['POST'])
@@ -419,7 +425,7 @@ def simulate_traffic():
     # Avoid the first 10 nodes in the original segment
     avoid_nodes = set()
     if original_segment and len(original_segment) > 1:
-        avoid_nodes.update(original_segment[:1])
+        avoid_nodes.update(original_segment[:-1])
     elif original_segment:
         avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
     print("AVOID")
