@@ -9,6 +9,7 @@ import pandas as pd
 import json
 import location
 import time
+import bruteforce
 
 app = Flask(__name__)
 
@@ -380,12 +381,11 @@ def generate_order():
     if algo_type == 1:
         # Brute force dijkstra TSP optimization Option 1
         start = time.time()
-        
+
         # Code here #
-
-
+        order , sorted_ids= bruteforce.main(start_coords, destination_coords, mapper, G)
         end = time.time()
-        print(f"[*] Dijkstra brute force took {(end - start):.3f} seconds!\n")
+        print(f"[*] Dijkstra - Brute Force took {(end - start):.3f} seconds!\n")
 
     elif algo_type == 2:
         # Dijkstra's estimated TSP optimization Option 2
@@ -393,7 +393,7 @@ def generate_order():
         order, mapped , nodecount_segment_dij = dij.main(start_coords, destination_coords, mapper, G)
         end = time.time()
 
-        print(f"[*] Dijkstra took {(end - start):.3f} seconds!\n")
+        print(f"[*] Dijkstra - Nearest Neighbour took {(end - start):.3f} seconds!\n")
         
         reversed_mapper = {coords: id for id, coords in mapped.items()}
         sorted_ids = [0]
@@ -415,6 +415,8 @@ def generate_order():
         session['sorted_ids'] = sorted_ids
         order = tuple(sorted_ids)
 
+    print ("Order is : ", order)
+    print("Sorted IDS: ", sorted_ids)
     ordered_data, total_distance, total_time = compute_routes(sorted_ids, order)
     return render_template('order.html', ordered_data=ordered_data, total_distance=round(total_distance, 2), total_time=round(total_time, 2))
 
