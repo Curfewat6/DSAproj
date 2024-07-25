@@ -234,9 +234,9 @@ def index():
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
-    print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
-    fetch_traffic_incident(G)   
-    print("[+]Traffic incident fetched successfully :D")
+    # print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
+    # fetch_traffic_incident(G)   
+    # print("[+]Traffic incident fetched successfully :D")
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
@@ -516,8 +516,6 @@ def simulate_traffic():
         print("Original segment not found")
 
 
-    
-        
     # Fetch LTA traffic data and update edge weights
     # Maybe these 2 function below causing the infinite printing of nothing, so i try commment it out
     # traffic_data = fetch_traffic_flow_data(api_key)
@@ -527,17 +525,21 @@ def simulate_traffic():
     # This will return a list of nodes that are in the traffic incident and assign it to avoid_nodes
 
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
-    avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
-    # if original_segment and len(original_segment) > 1:
-    #     avoid_nodes.update(original_segment[:1])
-    # elif original_segment:
-    #     avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
-    if avoid_nodes:
-        print("Avoid nodes:", avoid_nodes)
-        #if there are avoid nodes, run astar again and avoid the node
-    else:
-        print("No nodes to avoid in this segment")
-        #else no nodes to avoid then just do nth 
+    #avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
+
+    avoid_nodes =set()
+    if original_segment and len(original_segment) > 1:
+        avoid_nodes.update(original_segment[:1])
+    elif original_segment:
+        avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
+
+
+    # if avoid_nodes:
+    #     print("Avoid nodes:", avoid_nodes)
+    #     #if there are avoid nodes, run astar again and avoid the node
+    # else:
+    #     print("No nodes to avoid in this segment")
+    #     #else no nodes to avoid then just do nth 
     # Compute an alternative route avoiding the first 10 nodes in the original segment
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
     alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
