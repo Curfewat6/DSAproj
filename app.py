@@ -57,10 +57,8 @@ def a_star_search(graph, start, goal, avoid_edges=set()):
                 costs[neighbor] = new_cost
                 priority = new_cost + heuristic(neighbor, goal, graph)
                 heapq.heappush(pq, (priority, neighbor, path))
-    
-    print("No path found from {} to {} with avoid_edges: {}".format(start, goal, avoid_edges))
-    return None, node_count
-
+    print("No path found")
+    return None
 
 # Function to fetch real-time traffic data from the Traffic Flow API
 def fetch_traffic_flow_data(api_key):
@@ -99,9 +97,7 @@ def update_edge_weights(graph, traffic_data):
             start_node = get_nearest_node(graph, start_coords)
             end_node = get_nearest_node(graph, end_coords)
             speed_band = float(segment['SpeedBand'])
-            # print("Speed band is:")
-            # print(segment['SpeedBand'])
-            print()
+
             if start_node in graph and end_node in graph[start_node]:
                 length = graph[start_node][end_node][0]['length'] / 1000  # Convert to km
                 travel_time = length / speed_band  # Time in hours
@@ -402,31 +398,25 @@ def simulate_traffic():
 
     # Simulate high traffic using a copied graph
     G_simulated = simulate_high_traffic(G, start_coords, first_destination)
-    
+
     original_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node)
     original_route_data = []
 
     if original_segment and len(original_segment) > 1:
+        print(original_segment)
+        print(type(original_segment))
         segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
         original_route_data.append({'coords': segment_coords, 'color': 'red'})
-    else:
-        print("Original segment not found")
         
     # Fetch LTA traffic data and update edge weights
     traffic_data = fetch_traffic_flow_data(api_key)
     update_edge_weights(G_simulated, traffic_data)
 
-    # Avoid the first 10 nodes in the original segment
-    avoid_nodes = set()
-    if original_segment and len(original_segment) > 1:
-        avoid_nodes.update(original_segment[:1])
-    elif original_segment:
-        avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
-    print("AVOID")
-    print(avoid_nodes)
-    # Compute an alternative route avoiding the first 10 nodes in the original segment
+    # Compute an alternative route using the nearest neighbor node of the destination
+    avoid_edges = set((original_segment[i], original_segment[i + 1]) for i in range(len(original_segment) - 1))
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
-    alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
+    alternative_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node, avoid_edges)
+    # alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_edges)
     alternative_route_data = []
     alt_total_distance = 0
     alt_total_time = 0
@@ -437,12 +427,10 @@ def simulate_traffic():
         
         # Calculate total distance and time for alternative route with heavy traffic
         alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G_simulated)
-    else:
-        print("Alternative segment not found")
 
     return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
 
 if __name__ == '__main__':
     app.secret_key = 'super secret key'
     app.config['SESSION_TYPE'] = 'filesystem'
-    app.run(debug=True)
+    app.run(debug=True) 
