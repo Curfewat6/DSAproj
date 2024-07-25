@@ -286,7 +286,10 @@ def check_address():
     
     # You can redirect to another page or render a template with the results
     return render_template('results.html', start_data=start_data, destination_data=destination_data)
-    
+
+
+
+
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
     """
@@ -295,6 +298,10 @@ def generate_order():
     This function generates the order of locations to visit first using dijkstra
     This endpoint will lead to order.html
     """
+
+    # To compare the nearest neighbour to the brute force 
+    #comparison(start_coords,destination_coords,G)
+
     # Initialise variables
     global total_distance_travelled
     global total_time_taken
@@ -485,7 +492,7 @@ def simulate_traffic():
     #Give me the orignal segment path , pass it to match_nodes_in_traffic_incident(G,path)
     # This will return a list of nodes that are in the traffic incident and assign it to avoid_nodes
 
-    # Avoid the first 10 nodes in the original segment
+    # Avoid nodes will be based on REAL TIME DATA FROM LTA
     avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
     # if original_segment and len(original_segment) > 1:
     #     avoid_nodes.update(original_segment[:1])
@@ -496,7 +503,7 @@ def simulate_traffic():
         #if there are avoid nodes, run astar again and avoid the node
     else:
         print("No nodes to avoid in this segment")
-        #if no nodes to avoid then just do nth 
+        #else no nodes to avoid then just do nth 
     # Compute an alternative route avoiding the first 10 nodes in the original segment
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
     alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
