@@ -16,38 +16,6 @@ app = Flask(__name__)
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
 
-#Function to fetch lta data for traffic incident 
-def fetch_traffic_incident(G):
-    url = "http://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
-    payload = {}
-    headers = {
-        'AccountKey': '8RW2GbiGRDK2ND8dY9n29g=='
-    }
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    response_text = response.text
-
-    # Parse the response text into a JSON object
-    data = json.loads(response_text)
-
-    # Extract type, latitude, and longitude
-    extracted_data = []
-    for item in data['value']:  # Assuming the relevant data is under the 'value' key
-        extracted_data.append({
-            'Type': item['Type'],
-            'Latitude': item['Latitude'],
-            'Longitude': item['Longitude']
-        })
-
-    # Create a DataFrame
-    df = pd.DataFrame(extracted_data)
-
-    # Convert latitude and longitude to nodes
-    df['Node'] = df.apply(lambda row: ox.distance.nearest_nodes(G, row['Longitude'], row['Latitude']), axis=1)
-
-    # Save to Excel
-    df.to_excel('traffic_incident.xlsx', index=False)
-
 
 
 
@@ -212,6 +180,52 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
             nearest_neighbor = neighbor
 
     return nearest_neighbor
+
+
+#Function to fetch lta data for traffic incident 
+def fetch_traffic_incident(G):
+    url = "http://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
+    payload = {}
+    headers = {
+        'AccountKey': '8RW2GbiGRDK2ND8dY9n29g=='
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    response_text = response.text
+
+    # Parse the response text into a JSON object
+    data = json.loads(response_text)
+
+    # Extract type, latitude, and longitude
+    extracted_data = []
+    for item in data['value']:  # Assuming the relevant data is under the 'value' key
+        extracted_data.append({
+            'Type': item['Type'],
+            'Latitude': item['Latitude'],
+            'Longitude': item['Longitude']
+        })
+
+    # Create a DataFrame
+    df = pd.DataFrame(extracted_data)
+
+    # Convert latitude and longitude to nodes
+    df['Node'] = df.apply(lambda row: ox.distance.nearest_nodes(G, row['Longitude'], row['Latitude']), axis=1)
+
+    # Save to Excel
+    df.to_excel('traffic_incident.xlsx', index=False)
+
+
+def match_nodes_in_traffic_incident(G, path):
+    nodes_to_avoid=[]
+    filename = 'traffic_incident.xlsx'
+    df = pd.read_excel(filename)
+    for node in path:
+        if node in df['Node'].values:
+            nodes_to_avoid.append(node)
+            print(node)
+
+    return nodes_to_avoid
+
 
 # FLASK APP
 @app.route('/')
@@ -446,24 +460,37 @@ def simulate_traffic():
     original_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node)
     original_route_data = []
 
+    print("Original segment:", original_segment)
+
     if original_segment and len(original_segment) > 1:
         segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
         original_route_data.append({'coords': segment_coords, 'color': 'red'})
     else:
         print("Original segment not found")
+
+
+    
         
     # Fetch LTA traffic data and update edge weights
-    traffic_data = fetch_traffic_flow_data(api_key)
-    update_edge_weights(G_simulated, traffic_data)
+    # Maybe these 2 function below causing the infinite printing of nothing, so i try commment it out
+    # traffic_data = fetch_traffic_flow_data(api_key)
+    # update_edge_weights(G_simulated, traffic_data)
+
+    #Give me the orignal segment path , pass it to match_nodes_in_traffic_incident(G,path)
+    # This will return a list of nodes that are in the traffic incident and assign it to avoid_nodes
 
     # Avoid the first 10 nodes in the original segment
-    avoid_nodes = set()
-    if original_segment and len(original_segment) > 1:
-        avoid_nodes.update(original_segment[:1])
-    elif original_segment:
-        avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
-    print("AVOID")
-    print(avoid_nodes)
+    avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
+    # if original_segment and len(original_segment) > 1:
+    #     avoid_nodes.update(original_segment[:1])
+    # elif original_segment:
+    #     avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
+    if avoid_nodes:
+        print("Avoid nodes:", avoid_nodes)
+        #if there are avoid nodes, run astar again and avoid the node
+    else:
+        print("No nodes to avoid in this segment")
+        #if no nodes to avoid then just do nth 
     # Compute an alternative route avoiding the first 10 nodes in the original segment
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
     alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
