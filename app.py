@@ -83,6 +83,9 @@ def update_edge_weights(graph, traffic_data):
                 travel_time = length / speed_band  # Time in hours
                 graph[start_node][end_node][0]['travel_time'] = travel_time * 60  # Convert to minutes
                 graph[start_node][end_node][0]['speed_band'] = speed_band  # Store speed band for coloring
+                
+                 # Debug output
+                print(f"Updated edge ({start_node}, {end_node}) with travel time: {travel_time * 60:.2f} mins, speed band: {speed_band}")
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
 
@@ -307,6 +310,12 @@ def compute_routes(sorted_ids, order):
     global total_distance_travelled
     global total_time_taken
     global entire_route_segments
+    
+    # Fetch and update real-time traffic data
+    # api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
+    # traffic_data = fetch_traffic_flow_data(api_key)
+    # if traffic_data:
+    #     update_edge_weights(G, traffic_data)
     
     precomputed_routes = []
     nodecount_segment_astar = []
