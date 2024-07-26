@@ -368,6 +368,7 @@ def generate_order():
         order , sorted_ids= bruteforce.main(start_coords, destination_coords, mapper, G)
         end = time.time()
         print(f"[*] Dijkstra - Brute Force took {(end - start):.3f} seconds!\n")
+        session['sorted_ids'] = sorted_ids
 
     elif algo_type == 2:
         # Dijkstra's estimated TSP optimization Option 2
