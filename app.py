@@ -10,6 +10,7 @@ import json
 import location
 import time
 import bruteforce
+import random
 
 app = Flask(__name__)
 
@@ -156,6 +157,7 @@ def fetch_traffic_incident(G):
     """
     Done by: Weijing
     """
+    print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
     url = "http://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
     payload = {}
     headers = {
@@ -185,21 +187,43 @@ def fetch_traffic_incident(G):
 
     # Save to Excel
     df.to_excel('traffic_incident.xlsx', index=False)
+    print("[+]Traffic incident fetched successfully :D")
 
 
 def match_nodes_in_traffic_incident(G, path):
     """
     Done by: Weijing
     """
+    
     nodes_to_avoid=[]
     filename = 'traffic_incident.xlsx'
     df = pd.read_excel(filename)
     for node in path:
         if node in df['Node'].values:
             nodes_to_avoid.append(node)
-            print(node)
 
     return nodes_to_avoid
+
+def add_random_node_to_traffic_incident(node):
+    """
+    done by Chin Liong
+    Add a random node to the traffic_incident.xlsx file
+    """
+    filename = 'traffic_incident.xlsx'
+    df = pd.read_excel(filename)
+    
+    # Ensure column D (3rd index) is available
+    while len(df.columns) <= 3:
+        df[df.columns[len(df.columns) - 1] + '_extra'] = None
+    
+    # Add the random node to the 200th row of column D
+    if len(df) < 500:
+        # Extend the DataFrame to have at least 200 rows
+        df = df.reindex(range(500))
+    df.iat[499, 3] = node  # 199 because indexing is 0-based
+    
+    df.to_excel(filename, index=False)
+    print(f"Added random node {node} to traffic_incident.xlsx")
 
 # FLASK APP
 @app.route('/')
@@ -214,9 +238,7 @@ def index():
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
-    # print("[*]Fetching traffic incident from LTA API and saving to traffic_incident.xlsx...")
-    # fetch_traffic_incident(G)   
-    # print("[+]Traffic incident fetched successfully :D")
+    fetch_traffic_incident(G)   
     return render_template('form.html')
 
 #step 2, from user input form to this function , use location.py to check for the coordinates
@@ -368,6 +390,7 @@ def generate_order():
         order , sorted_ids= bruteforce.main(start_coords, destination_coords, mapper, G)
         end = time.time()
         print(f"[*] Dijkstra - Brute Force took {(end - start):.3f} seconds!\n")
+        session['sorted_ids'] = sorted_ids
 
     elif algo_type == 2:
         # Dijkstra's estimated TSP optimization Option 2
@@ -498,62 +521,80 @@ def simulate_traffic():
     first_destination = destination_coords[sorted_ids[target] - 1]
     first_destination_node = destination_nodes[sorted_ids[target] - 1]
 
-    # Simulate high traffic using a copied graph
-    G_simulated = simulate_high_traffic(G, start_coords, first_destination)
-    
-    original_segment, node_count = aStar.search(G_simulated, start_node, first_destination_node)
+    #get the original route of from node a to node b and print the nodes in this segment
+    original_segment, node_count = aStar.search(G, start_node, first_destination_node)
     original_route_data = []
-
     print("Original segment:", original_segment)
 
-    if original_segment and len(original_segment) > 1:
-        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in original_segment]
-        original_route_data.append({'coords': segment_coords, 'color': 'red'})
-    else:
-        print("Original segment not found")
-
-
-    # Fetch LTA traffic data and update edge weights
-    # Maybe these 2 function below causing the infinite printing of nothing, so i try commment it out
-    # traffic_data = fetch_traffic_flow_data(api_key)
-    # update_edge_weights(G_simulated, traffic_data)
-
-    #Give me the orignal segment path , pass it to match_nodes_in_traffic_incident(G,path)
-    # This will return a list of nodes that are in the traffic incident and assign it to avoid_nodes
-
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
-    #avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
+    avoid_nodes = set()
+    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
+    print("Initial avoid nodes:", avoid_nodes)
 
-    avoid_nodes =set()
-    if original_segment and len(original_segment) > 1:
-        avoid_nodes.update(original_segment[:1])
-    elif original_segment:
-        avoid_nodes.update(original_segment)  # If fewer than 10 nodes, avoid all
-
-
-    # if avoid_nodes:
-    #     print("Avoid nodes:", avoid_nodes)
-    #     #if there are avoid nodes, run astar again and avoid the node
-    # else:
-    #     print("No nodes to avoid in this segment")
-    #     #else no nodes to avoid then just do nth 
-    # Compute an alternative route avoiding the first 10 nodes in the original segment
-    neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
-    alternative_segment, node_count = aStar.search(G_simulated, start_node, neighbor_node, avoid_nodes)
-    alternative_route_data = []
-    alt_total_distance = 0
-    alt_total_time = 0
-
-    if alternative_segment and len(alternative_segment) > 1:
-        segment_coords = [(G_simulated.nodes[node]['y'], G_simulated.nodes[node]['x']) for node in alternative_segment]
-        alternative_route_data.append({'coords': segment_coords, 'color': 'green'})
+    #Remove destionation node from avoid_nodes if found in here
+    #because it will affect A* algo and never find the location
+    #no choice if the accident is at ur end node
+    if first_destination_node in avoid_nodes:
+        avoid_nodes.remove(first_destination_node)
         
-        # Calculate total distance and time for alternative route with heavy traffic
-        alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G_simulated)
-    else:
-        print("Alternative segment not found")
+    if start_node in avoid_nodes:
+        avoid_nodes.remove(start_node)
 
-    return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
+    # Add one random node from the original segment to traffic_incident.xlsx column D
+    if original_segment:
+        random_node = random.choice(original_segment)
+        add_random_node_to_traffic_incident(random_node)
+
+    
+    #if there are things in avoid_nodes
+    #find another path for driver
+    if avoid_nodes:
+        avoid_edges = set()
+        
+        #turn the original path to red
+        if original_segment and len(original_segment) > 1:
+            segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
+            original_route_data.append({'coords': segment_coords, 'color': 'red'})
+
+        #get the edges to avoid
+        for node in avoid_nodes:
+            edges_to_avoid = list(G.edges(node))
+            print(f"Edges to avoid for node {node}: {edges_to_avoid}")
+            avoid_edges.update(G.edges(node))
+
+        #send it to a* and find another path
+        print("FINDING ALTERNATIVE PATH")
+        alternative_segment, node_count = aStar.search(G, start_node, first_destination_node, avoid_edges)
+        alternative_route_data = []
+        alt_total_distance = 0
+        alt_total_time = 0
+        print("Alternative segment:", alternative_segment)
+
+        #turn alternate path to green
+        if alternative_segment and len(alternative_segment) > 1:
+            segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in alternative_segment]
+            alternative_route_data.append({'coords': segment_coords, 'color': 'green'})
+        
+            # Calculate total distance and time for alternative route with heavy traffic
+            alt_total_distance, alt_total_time = calculate_route_distance_and_time(alternative_segment, G)
+        
+            #display here
+            return jsonify(original_route_data=original_route_data, alternative_route_data=alternative_route_data, alt_total_distance=alt_total_distance, alt_total_time=alt_total_time)
+        else:
+            print("Alternative segment not found")
+    else:
+        
+        #change the color of original_route_data to green instead
+        if original_segment and len(original_segment) > 1:
+            segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
+            original_route_data.append({'coords': segment_coords, 'color': 'green'})
+
+        print("All good with your original path")
+        print("To simulate traffic incident and test out the function. Copy some node from the original segment and paste it in traffic_incident.xlsx file")
+
+        #else just do nothing and render the same page
+        return jsonify(original_route_data=original_route_data)
+        
 
 if __name__ == '__main__':
     app.secret_key = 'super secret key'
