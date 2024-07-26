@@ -14,9 +14,20 @@ import random
 
 app = Flask(__name__)
 
-# Load the graph from OpenStreetMap
+# Load the graph from OpenStreetMap from cacche 
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
+
+def check_negative_weight(G):
+    flag = True
+    for node1, node2, data in G.edges(data=True):
+        if data.get('length', 0) < 0:
+            print(f"Negative edge found between {node1} and {node2} with length {data['length']}")
+            flag = False
+    
+    if flag:
+        print("[+]No negative weight in edges :D")
+    
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
@@ -234,7 +245,9 @@ def index():
     This will lead to form.html
     This function will clear the session to drop previous data to prevent overlapping
     """
-    print(G)
+    #check for negative weight in edges
+    check_negative_weight(G)
+    print("[+]",G)
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
