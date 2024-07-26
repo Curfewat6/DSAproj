@@ -484,17 +484,16 @@ def plot_entire_route():
     sorted_ids_copy = session.get('sorted_ids')
     sorted_ids_copy.remove(0)
     destination_coords = [session.get(f'lcoords{data}') for data in sorted_ids_copy]
-
+    sorted_ids_copy.insert(0,0)
     # Ensure total_distance and total_time are not None
     if total_distance_travelled is None:
         total_distance_travelled = 0
     if total_time_taken is None:
         total_time_taken = 0
-
     start_address = session.get('address0')
-    end_address = session.get(f'address{counter}')
+    end_address = session.get(f'address{sorted_ids_copy[-1]}')
     start_coords = session.get(f'lcoords0')
-    end_coords = session.get(f'lcoords{counter}')
+    end_coords = session.get(f'lcoords{sorted_ids_copy[-1]}')
 
     return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance_travelled, total_time=total_time_taken, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance_travelled, 2), segment_time=round(total_time_taken, 2), entire_route=True)
 
