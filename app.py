@@ -556,6 +556,9 @@ def simulate_traffic():
             segment_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in original_segment]
             original_route_data.append({'coords': segment_coords, 'color': 'green'})
 
+        print("All good with your original path")
+        print("To simulate traffice and test out the function. Copy some node from the original segment and paste it in traffic_incident.xlsx file")
+
         #else just do nothing and render the same page
         return jsonify(original_route_data=original_route_data)
         
