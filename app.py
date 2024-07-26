@@ -1,12 +1,12 @@
-import heapq
 import osmnx as ox
 from geopy.distance import geodesic
 import requests
-from flask import Flask, jsonify, render_template, request,redirect, url_for, session
+from flask import Flask, jsonify, render_template, request, session
+import aStar
 import dij
 import aco
 import pandas as pd
-import json
+import json 
 import location
 import time
 import bruteforce
@@ -21,52 +21,11 @@ G = ox.load_graphml(graph_name)
 def get_nearest_node(graph, point):
     return ox.distance.nearest_nodes(graph, point[1], point[0])
 
-# Heuristic function for A*
-def heuristic(node1, node2, graph):
-    coords_1 = (graph.nodes[node1]['y'], graph.nodes[node1]['x'])
-    coords_2 = (graph.nodes[node2]['y'], graph.nodes[node2]['x'])
-    h = geodesic(coords_1, coords_2).meters
-    return h
-
-# Custom A* search algorithm with traffic-aware cost calculation
-def a_star_search(graph, start, goal, avoid_edges=set()):
-    node_count = 0
-    pq = [(0, start, [])]  # Priority queue as (cost, current_node, path)
-    costs = {start: 0}
-    visited = set()
-    
-    while pq:
-        node_count += 1
-        cost, current, path = heapq.heappop(pq)
-        
-        if current in visited:
-            continue
-        
-        path = path + [current]
-        if current == goal:
-            return path, node_count
-        
-        visited.add(current)
-        
-        for neighbor in graph.neighbors(current):
-            if neighbor in visited or (current, neighbor) in avoid_edges or (neighbor, current) in avoid_edges:
-                continue
-            
-            edge_data = graph[current][neighbor][0]
-            travel_time = edge_data.get('travel_time', edge_data['length'] / 5)  # Default to speed 5 m/s if not set
-            
-            new_cost = costs[current] + travel_time
-            if neighbor not in costs or new_cost < costs[neighbor]:
-                costs[neighbor] = new_cost
-                priority = new_cost + heuristic(neighbor, goal, graph)
-                heapq.heappush(pq, (priority, neighbor, path))
-    
-    print("No path found from {} to {} with avoid_edges: {}".format(start, goal, avoid_edges))
-    return None, node_count
-
-
 # Function to fetch real-time traffic data from the Traffic Flow API
 def fetch_traffic_flow_data(api_key):
+    """
+    Done by: Chin Leong
+    """
     url = "http://datamall2.mytransport.sg/ltaodataservice/v3/TrafficSpeedBands"
     headers = {
         'AccountKey': api_key,
@@ -89,6 +48,9 @@ def fetch_traffic_flow_data(api_key):
 
 # Function to update edge weights based on traffic data
 def update_edge_weights(graph, traffic_data):
+    """
+    Done by: Chin Leong
+    """
     for segment in traffic_data.get('value', []):
         try:
             start_lat = float(segment['StartLat'])
@@ -114,6 +76,9 @@ def update_edge_weights(graph, traffic_data):
 
 # Function to simulate high traffic
 def simulate_high_traffic(graph, start_coords, end_coords):
+    """
+    Done by: Chin Leong
+    """
     graph_copy = graph.copy()
     start_node = get_nearest_node(graph_copy, start_coords)
     end_node = get_nearest_node(graph_copy, end_coords)
@@ -125,6 +90,9 @@ def simulate_high_traffic(graph, start_coords, end_coords):
 
 # Speed Band Calculation
 def speed_band_to_speed(speed_band):
+    """
+    Done by: Chin Leong
+    """
     # Convert speed band to speed in km/h based on LTA definitions
     if speed_band == 1:
         return 5  # Severe congestion or road closure
@@ -140,6 +108,9 @@ def speed_band_to_speed(speed_band):
         return 40  # Default to free flow if unknown band
     
 def calculate_route_distance_and_time(route, graph):
+    """
+    Done by: Chin Leong
+    """
     total_distance = 0
     total_time = 0
 
@@ -163,6 +134,9 @@ def calculate_route_distance_and_time(route, graph):
     return total_distance, total_time
 
 def get_nearest_neighbor_node(graph, node, exclude_node):
+    """
+    Done by: Lucas
+    """
     nearest_neighbor = None
     min_distance = float('inf')
 
@@ -179,6 +153,9 @@ def get_nearest_neighbor_node(graph, node, exclude_node):
 
 #Function to fetch lta data for traffic incident 
 def fetch_traffic_incident(G):
+    """
+    Done by: Weijing
+    """
     url = "http://datamall2.mytransport.sg/ltaodataservice/TrafficIncidents"
     payload = {}
     headers = {
@@ -211,6 +188,9 @@ def fetch_traffic_incident(G):
 
 
 def match_nodes_in_traffic_incident(G, path):
+    """
+    Done by: Weijing
+    """
     nodes_to_avoid=[]
     filename = 'traffic_incident.xlsx'
     df = pd.read_excel(filename)
@@ -220,7 +200,6 @@ def match_nodes_in_traffic_incident(G, path):
             print(node)
 
     return nodes_to_avoid
-
 
 # FLASK APP
 @app.route('/')
@@ -288,6 +267,7 @@ def check_address():
 def compute_routes(sorted_ids, order):
     """
     This function runs A* algorithm with a specified order given by the parameter
+    Done by: Chin Leong, Weijing, Lucas
     """
     global total_distance_travelled
     global total_time_taken
@@ -305,7 +285,7 @@ def compute_routes(sorted_ids, order):
         end_id = sorted_ids[i + 1]
         start_node = get_nearest_node(G, session.get(f'lcoords{start_id}'))
         end_node = get_nearest_node(G, session.get(f'lcoords{end_id}'))
-        segment, node_count = a_star_search(G, start_node, end_node)
+        segment, node_count = aStar.search(G, start_node, end_node)
         
         
         nodecount_segment_astar.append(node_count)
@@ -360,6 +340,8 @@ def generate_order():
     
     This function generates the order of locations to visit first using dijkstra
     This endpoint will lead to order.html
+
+    Done by: Weijing, Lucas
     """
 
     # To compare the nearest neighbour to the brute force 
@@ -426,6 +408,8 @@ def plot():
     Step 4: based on the order given, plot the route
     
     This function will plot the segmented route based on the precomputed routes as specified
+
+    Done by: Chin Leong, Lucas
     """
     target = int(request.form['step_number'])  # Get the step number
     session['target'] = target
@@ -461,6 +445,9 @@ def plot():
 
 @app.route('/plot_entire_route', methods=['POST'])
 def plot_entire_route():
+    """
+    Done by: Chin Leong
+    """
     counter = session.get('counter')
     global entire_route_segments
     global total_distance_travelled
@@ -485,6 +472,9 @@ def plot_entire_route():
 
 @app.route('/simulate_traffic')
 def simulate_traffic():
+    """
+    Done by: Chin Leong
+    """
     api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
     counter = session.get('counter')
     target = int(session.get('target'))  # Get the target step number
@@ -506,7 +496,7 @@ def simulate_traffic():
     # Simulate high traffic using a copied graph
     G_simulated = simulate_high_traffic(G, start_coords, first_destination)
     
-    original_segment, node_count = a_star_search(G_simulated, start_node, first_destination_node)
+    original_segment, node_count = aStar.search(G_simulated, start_node, first_destination_node)
     original_route_data = []
 
     print("Original segment:", original_segment)
@@ -544,7 +534,7 @@ def simulate_traffic():
     #     #else no nodes to avoid then just do nth 
     # Compute an alternative route avoiding the first 10 nodes in the original segment
     neighbor_node = get_nearest_neighbor_node(G, first_destination_node, exclude_node=start_node)
-    alternative_segment, node_count = a_star_search(G_simulated, start_node, neighbor_node, avoid_nodes)
+    alternative_segment, node_count = aStar.search(G_simulated, start_node, neighbor_node, avoid_nodes)
     alternative_route_data = []
     alt_total_distance = 0
     alt_total_time = 0

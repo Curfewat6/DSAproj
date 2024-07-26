@@ -1,3 +1,6 @@
+"""
+Done by: Joel
+"""
 import requests
 MAX_TRY = 5
 
@@ -128,6 +131,3 @@ def coord2addr(coord):
         data = response.json()
         return data.get('display_name', 'Address not found')
     return 'Address not found'
-
-    
-

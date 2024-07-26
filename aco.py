@@ -1,3 +1,6 @@
+"""
+Done by: Lucas
+"""
 import numpy as np
 
 def get_nearest_node(graph, point):

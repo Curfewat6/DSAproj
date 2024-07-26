@@ -1,3 +1,6 @@
+"""
+Done by: Weijing
+"""
 import os
 import osmnx as ox
 import heapq
@@ -100,7 +103,6 @@ def nearest_neighbor(graph, start_node, end_nodes):
         
     
 def main(start_coords, destination_coords, mapped_coords ,G):
-    
     #To this order to be passed to A* example will be 
     #declare global order tuple
     global order_dij
