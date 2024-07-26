@@ -438,11 +438,10 @@ def plot():
     session['target'] = target
     
     sorted_ids = session.get('sorted_ids')
-    counter = session.get('counter')    
     precomputed_routes = session.get('precomputed_routes')
 
     start_coords = session.get('lcoords0')
-    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    destination_coords = [session.get(f'lcoords{data}') for data in sorted_ids]
     destination_coords.pop()  # Just a quick fix
 
     segment = precomputed_routes[target - 1]
@@ -463,8 +462,8 @@ def plot():
     end_address = session.get(f'address{sorted_ids[target]}')
     start_coords = session.get(f'lcoords{sorted_ids[target-1]}')
     end_coords = session.get(f'lcoords{sorted_ids[target]}')
-
-    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
+    print(destination_coords)
+    return render_template('plot.html',segmented = -1, start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=route_segments, total_distance=total_distance, total_time=total_time, step_number=str(target), start_address=start_address, end_address=end_address, segment_distance=round(segment_distance, 2), segment_time=round(segment_time, 2), entire_route=False)
 
 @app.route('/plot_entire_route', methods=['POST'])
 def plot_entire_route():
@@ -484,7 +483,7 @@ def plot_entire_route():
     sorted_ids_copy = session.get('sorted_ids')
     sorted_ids_copy.remove(0)
     destination_coords = [session.get(f'lcoords{data}') for data in sorted_ids_copy]
-    
+
     # Ensure total_distance and total_time are not None
     if total_distance_travelled is None:
         total_distance_travelled = 0
@@ -494,8 +493,9 @@ def plot_entire_route():
     end_address = session.get(f'address{sorted_ids_copy[-1]}')
     start_coords = session.get(f'lcoords0')
     end_coords = session.get(f'lcoords{sorted_ids_copy[-1]}')
+    print(destination_coords)
 
-    return render_template('plot.html', start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance_travelled, total_time=total_time_taken, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance_travelled, 2), segment_time=round(total_time_taken, 2), entire_route=True)
+    return render_template('plot.html',segmented = 0, start_coords=start_coords, end_coords=end_coords, destination_coords=destination_coords, route_segments=entire_route_segments, total_distance=total_distance_travelled, total_time=total_time_taken, step_number="Entire Route", start_address=start_address, end_address=end_address, segment_distance=round(total_distance_travelled, 2), segment_time=round(total_time_taken, 2), entire_route=True)
 
 @app.route('/simulate_traffic')
 def simulate_traffic():
@@ -527,7 +527,7 @@ def simulate_traffic():
 
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
     avoid_nodes = set()
-    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
+    
     print("Initial avoid nodes:", avoid_nodes)
 
     #Remove destionation node from avoid_nodes if found in here
@@ -543,6 +543,8 @@ def simulate_traffic():
     if original_segment:
         random_node = random.choice(original_segment)
         add_random_node_to_traffic_incident(random_node)
+    
+    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
 
     
     #if there are things in avoid_nodes

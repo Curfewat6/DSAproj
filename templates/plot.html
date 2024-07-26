@@ -53,6 +53,7 @@
         var routeSegments = {{ route_segments|tojson }};
         var start_coords = {{ start_coords|tojson }};
         var destination_coords = {{ destination_coords|tojson }};
+        var segmented = {{ segmented|tojson }};
 
         console.log("Start coordinates:", start_coords);
         console.log("End coordinates:", {{ end_coords|tojson }});
@@ -75,9 +76,17 @@
         });
 
         L.marker([start_coords[0], start_coords[1]], {icon: greenIcon}).bindPopup("Start").addTo(map);
-        destination_coords.forEach(function(coords, index) {
+        console.log("Segmented:", segmented);
+        if (segmented == -1) {
+            destination_coords.forEach(function(coords, index) {
+                L.marker([coords[0], coords[1]], {icon: redIcon}).bindPopup("Destination " + (index)).addTo(map);
+            });
+        }else{
+            destination_coords.forEach(function(coords, index) {
             L.marker([coords[0], coords[1]], {icon: redIcon}).bindPopup("Destination " + (index + 1)).addTo(map);
         });
+        }
+
 
         routeSegments.forEach(function(segment) {
             var latlngs = segment.map(function(coord) {
