@@ -103,7 +103,10 @@
                         return [coord[0], coord[1]];
                     });
                     console.log("Plotting simulated heavy traffic segment:", latlngs);
-                    L.polyline(latlngs, { color: 'red', weight: 5, opacity: 0.8 }).addTo(map);
+                    // Get the color from original_route_data
+                    var color = segment.color;
+
+                    L.polyline(latlngs, { color: color, weight: 5, opacity: 0.8 }).addTo(map);
                 });
 
                 // Add alternative route in green
@@ -112,7 +115,8 @@
                         return [coord[0], coord[1]];
                     });
                     console.log("Plotting alternative segment:", latlngs);
-                    L.polyline(latlngs, { color: 'green', weight: 5, opacity: 0.8 }).addTo(map);
+                    var color = segment.color;
+                    L.polyline(latlngs, { color: color, weight: 5, opacity: 0.8 }).addTo(map);
                 });
 
                 $('#route-distance').text(`Total Distance: ${data.alt_total_distance.toFixed(2)} km`);

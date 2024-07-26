@@ -6,7 +6,7 @@ import osmnx as ox
 from geopy.distance import geodesic
 
 # Load the graph from OpenStreetMap
-G = ox.graph_from_place('Singapore', network_type='drive')
+#G = ox.graph_from_place('Singapore', network_type='drive')
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
