@@ -48,7 +48,11 @@ def fetch_traffic_flow_data(api_key):
     if response.status_code == 200:
         try:
             traffic_data = response.json()
-            return traffic_data
+            # Randomly select some of the traffic data entries to simulate partial live traffic flow data
+            total_segments = len(traffic_data['value'])
+            selected_indices = random.sample(range(total_segments), total_segments // 10)
+            selected_traffic_data = [traffic_data['value'][i] for i in selected_indices]
+            return selected_traffic_data
         except requests.exceptions.JSONDecodeError as e:
             print(f"JSON decode error: {e}")
             print(f"Response content: {response.content}")
@@ -63,8 +67,11 @@ def update_edge_weights(graph, traffic_data):
     """
     Done by: Chin Leong
     """
-    for segment in traffic_data.get('value', []):
+    total_start_time = time.time()
+    
+    for segment in traffic_data:
         try:
+            
             start_lat = float(segment['StartLat'])
             start_lon = float(segment['StartLon'])
             end_lat = float(segment['EndLat'])
@@ -88,6 +95,10 @@ def update_edge_weights(graph, traffic_data):
                 print(f"Updated edge ({start_node}, {end_node}) with travel time: {travel_time * 60:.2f} mins, speed band: {speed_band}")
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
+            
+    total_end_time = time.time()
+    total_duration = total_end_time - total_start_time
+    print (f"Total time taken to update edge weights: {total_duration:.2f} seconds")
 
 # Function to simulate high traffic
 def simulate_high_traffic(graph, start_coords, end_coords):
@@ -312,10 +323,10 @@ def compute_routes(sorted_ids, order):
     global entire_route_segments
     
     # Fetch and update real-time traffic data
-    # api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
-    # traffic_data = fetch_traffic_flow_data(api_key)
-    # if traffic_data:
-    #     update_edge_weights(G, traffic_data)
+    api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
+    traffic_data = fetch_traffic_flow_data(api_key)
+    if traffic_data:
+        update_edge_weights(G, traffic_data)
     
     precomputed_routes = []
     nodecount_segment_astar = []
