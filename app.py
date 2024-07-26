@@ -10,6 +10,7 @@ import json
 import location
 import time
 import bruteforce
+import random
 
 app = Flask(__name__)
 
@@ -203,6 +204,27 @@ def match_nodes_in_traffic_incident(G, path):
 
     return nodes_to_avoid
 
+def add_random_node_to_traffic_incident(node):
+    """
+    done by Chin Liong
+    Add a random node to the traffic_incident.xlsx file
+    """
+    filename = 'traffic_incident.xlsx'
+    df = pd.read_excel(filename)
+    
+    # Ensure column D (3rd index) is available
+    while len(df.columns) <= 3:
+        df[df.columns[len(df.columns) - 1] + '_extra'] = None
+    
+    # Add the random node to the 200th row of column D
+    if len(df) < 500:
+        # Extend the DataFrame to have at least 200 rows
+        df = df.reindex(range(500))
+    df.iat[499, 3] = node  # 199 because indexing is 0-based
+    
+    df.to_excel(filename, index=False)
+    print(f"Added random node {node} to traffic_incident.xlsx")
+
 # FLASK APP
 @app.route('/')
 def index():
@@ -368,6 +390,7 @@ def generate_order():
         order , sorted_ids= bruteforce.main(start_coords, destination_coords, mapper, G)
         end = time.time()
         print(f"[*] Dijkstra - Brute Force took {(end - start):.3f} seconds!\n")
+        session['sorted_ids'] = sorted_ids
 
     elif algo_type == 2:
         # Dijkstra's estimated TSP optimization Option 2
@@ -505,14 +528,22 @@ def simulate_traffic():
 
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
     avoid_nodes = set()
-    avoid_nodes = match_nodes_in_traffic_incident(G, original_segment)
-    print("Avoid nodes:", avoid_nodes)
+    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
+    print("Initial avoid nodes:", avoid_nodes)
 
     #Remove destionation node from avoid_nodes if found in here
     #because it will affect A* algo and never find the location
     #no choice if the accident is at ur end node
     if first_destination_node in avoid_nodes:
         avoid_nodes.remove(first_destination_node)
+        
+    if start_node in avoid_nodes:
+        avoid_nodes.remove(start_node)
+
+    # Add one random node from the original segment to traffic_incident.xlsx column D
+    if original_segment:
+        random_node = random.choice(original_segment)
+        add_random_node_to_traffic_incident(random_node)
 
     
     #if there are things in avoid_nodes
@@ -527,6 +558,8 @@ def simulate_traffic():
 
         #get the edges to avoid
         for node in avoid_nodes:
+            edges_to_avoid = list(G.edges(node))
+            print(f"Edges to avoid for node {node}: {edges_to_avoid}")
             avoid_edges.update(G.edges(node))
 
         #send it to a* and find another path
