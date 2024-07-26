@@ -454,8 +454,13 @@ def plot_entire_route():
     global total_time_taken
 
     start_coords = session.get('lcoords0')
-    destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    destination_coords.pop()  # Just a quick fix
+    #destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
+    #destination_coords.pop()  # Just a quick fix
+
+    #get destionation_coords on the sorted Id
+    sorted_ids_copy = session.get('sorted_ids')
+    sorted_ids_copy.remove(0)
+    destination_coords = [session.get(f'lcoords{data}') for data in sorted_ids_copy]
 
     # Ensure total_distance and total_time are not None
     if total_distance_travelled is None:
