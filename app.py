@@ -514,7 +514,9 @@ def simulate_traffic():
     #no choice if the accident is at ur end node
     if first_destination_node in avoid_nodes:
         avoid_nodes.remove(first_destination_node)
-
+    
+    if start_node in avoid_nodes:
+        avoid_nodes.remove(start_node)
     
     #if there are things in avoid_nodes
     #find another path for driver
