@@ -527,7 +527,7 @@ def simulate_traffic():
 
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
     avoid_nodes = set()
-    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
+    
     print("Initial avoid nodes:", avoid_nodes)
 
     #Remove destionation node from avoid_nodes if found in here
@@ -543,6 +543,8 @@ def simulate_traffic():
     if original_segment:
         random_node = random.choice(original_segment)
         add_random_node_to_traffic_incident(random_node)
+    
+    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
 
     
     #if there are things in avoid_nodes
