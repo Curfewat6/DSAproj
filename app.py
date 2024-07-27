@@ -11,12 +11,34 @@ import location
 import time
 import bruteforce
 import random
+import os
 
 app = Flask(__name__)
 
 # Load the graph from OpenStreetMap from cacche 
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
+
+def downloadOSMX():
+    graph_name = "singapore.graphml"
+    if os.path.isfile(graph_name):
+        print("Graph already exists")
+        graph = ox.load_graphml(graph_name)
+        return graph 
+    
+    print("Downloading Graph")
+    # Define the place name or coordinates for the area you want to download
+    place_name = "Singapore"
+
+    # Download the road network data for the specified place
+    graph = ox.graph_from_place(place_name, network_type='drive', retain_all=True, simplify=True)
+
+    # Save the graph to a GraphML file
+    ox.save_graphml(graph, graph_name)
+
+    print("Graph downloaded")
+
+    return graph
 
 def check_negative_weight(G):
     flag = True
@@ -83,8 +105,7 @@ def update_edge_weights(graph, traffic_data):
             start_node = get_nearest_node(graph, start_coords)
             end_node = get_nearest_node(graph, end_coords)
             speed_band = float(segment['SpeedBand'])
-            # print("Speed band is:")
-            # print(segment['SpeedBand'])
+          
             if start_node in graph and end_node in graph[start_node]:
                 length = graph[start_node][end_node][0]['length'] / 1000  # Convert to km
                 travel_time = length / speed_band  # Time in hours
@@ -219,7 +240,6 @@ def match_nodes_in_traffic_incident(G, path):
     """
     Done by: Weijing
     """
-    
     nodes_to_avoid=[]
     filename = 'traffic_incident.xlsx'
     df = pd.read_excel(filename)
@@ -509,8 +529,6 @@ def plot_entire_route():
     global total_time_taken
 
     start_coords = session.get('lcoords0')
-    #destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    #destination_coords.pop()  # Just a quick fix
 
     #get destionation_coords on the sorted Id
     sorted_ids_copy = session.get('sorted_ids')
