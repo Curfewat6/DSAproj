@@ -27,10 +27,11 @@ def downloadOSMX():
     return graph
 
 def nearest_neighbor(graph, start_node, end_nodes):
-     # Initialize arrays
-   # print("YOOOOOOOOOOOOOOOOOOOOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+
+    #init things
     node_count=0
     path=[]
+    #set to inf distance 
     distTo = {node: float('inf') for node in graph.nodes}
     edgeTo = {node: None for node in graph.nodes}
     marked = {node: False for node in graph.nodes}
@@ -42,6 +43,7 @@ def nearest_neighbor(graph, start_node, end_nodes):
     # in this case, the distance is the priority , shortest distance highest priority
     pq = [(0, start_node)]  # (distance, node)
 
+    #while priority q not empty 
     while pq:
         
         node_count += 1
@@ -52,30 +54,10 @@ def nearest_neighbor(graph, start_node, end_nodes):
         if marked[current_node]:
             continue
         marked[current_node] = True
-        # if end_nodes == [1829398209]:
-        #     print("You made it")
-        #Exit after first end node is found 
-        if current_node in end_nodes:
-            if current_node == 1829398209:
-                print("You made it")
-            # print("First end node found, treat this end node as start node again")
-            # print(f"YOU ARE WORKING ON THIS NODE {current_node}")
-            # #get path to the first end node 
-            # trace_node = current_node
-            # while trace_node != start_node:
-            #     path.append(trace_node)
-            #     trace_node = edgeTo[trace_node]
-            # path.append(start_node)
-            # path.reverse()
 
-            # Convert start_node and current_node to coordinates and add to order tuple
-            # start_coords = (graph.nodes[start_node]['y'], graph.nodes[start_node]['x'])
-            # end_coords = (graph.nodes[current_node]['y'], graph.nodes[current_node]['x'])
-            # print(start_node,current_node)
+        #break if is in end_nodes
+        if current_node in end_nodes:
             order_dij.append((graph.nodes[start_node]['y'],graph.nodes[start_node]['x'],graph.nodes[current_node]['y'],graph.nodes[current_node]['x']))
-            # print("DEBUGGIN STATEMENT")
-            # print(f"NODE COUNT: {node_count}")
-            # print(f"CURRENT_NODE: {current_node}")
             return node_count, current_node
 
         # Get the neighbors of the current node
@@ -94,6 +76,7 @@ def nearest_neighbor(graph, start_node, end_nodes):
             edge_distance = edge_data.get('length', 1)
             distance = current_distance + edge_distance
 
+            # If the distance to this neighbor is less than the distance to the current node
             if distance < distTo[neighbor]:
                 distTo[neighbor] = distance
                 edgeTo[neighbor] = current_node
@@ -112,30 +95,7 @@ def main(start_coords, destination_coords, mapped_coords ,G):
     dij_precomputed_route = []
     nodecount_segment=[]
     graph = G
-    # print("COORDS ARE HERE")
-    # print(mapped_coords)
-    # #Step1 Get graph
-    # graph = downloadOSMX()
-    # if graph == None:
-    #     print("Failed to download the graph. Exiting...")
-    #     return
     
-    # ###INTEGRATE with location.py
-    # start_coords = [location.addr2coord("ubi challenger warehouse")]  # [Ubi Challenger warehouse]
-    # destination_coords = [
-    # location.addr2coord("great world city"),     # GWC [Furthest]
-    # location.addr2coord("ion orchard"),     # ION orchard [middle]
-    # location.addr2coord("bishan mrt")      # Bishan [closest]
-    # ]
-    
-    # #Step2 Get locations
-    # start_location = [
-    #     (1.3521, 103.8198),  # Marina Bay Sands
-    # ]
-    # end_locations = [
-    #     (1.2839, 103.8601),  # Singapore Sports Hub
-    #     (1.2806, 103.8500)   # Raffles Place
-    # ]
 
     #Step3 Convert coordinates to nodes in osmnx
     start_node = ox.distance.nearest_nodes(graph, start_coords[1], start_coords[0])
@@ -146,22 +106,16 @@ def main(start_coords, destination_coords, mapped_coords ,G):
         print((graph.nodes[node]['y'],graph.nodes[node]['x']))
         mapped_coords[counting_guy] = (graph.nodes[node]['y'],graph.nodes[node]['x'])
         counting_guy +=1
-    # print("END NODES")
-    # print(end_nodes)
+
     #Step4 Find the shortest path from start_node to end_nodes
     #Use dijstra to find the path from start_node to individual end_nodes
     while end_nodes != []:
-        # print("BEFORE REMOVING")
-        # print(end_nodes)
+
         number_of_nodes, current_node = nearest_neighbor(graph, start_node, end_nodes)
-        #dij_precomputed_route.append(path)
         nodecount_segment.append(number_of_nodes)
-        #path = extract_path(edgeTo, start_node, current_node)
         start_node = current_node
-        
         end_nodes.remove(current_node)
-        # print("AFTER REMOVING")
-        # print(end_nodes)
+      
     return order_dij, mapped_coords, nodecount_segment
 
 if __name__ == "__main__":

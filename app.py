@@ -11,12 +11,45 @@ import location
 import time
 import bruteforce
 import random
+import os
 
 app = Flask(__name__)
 
-# Load the graph from OpenStreetMap
+# Load the graph from OpenStreetMap from cacche 
 graph_name = "singapore.graphml"
 G = ox.load_graphml(graph_name)
+
+def downloadOSMX():
+    graph_name = "singapore.graphml"
+    if os.path.isfile(graph_name):
+        print("Graph already exists")
+        graph = ox.load_graphml(graph_name)
+        return graph 
+    
+    print("Downloading Graph")
+    # Define the place name or coordinates for the area you want to download
+    place_name = "Singapore"
+
+    # Download the road network data for the specified place
+    graph = ox.graph_from_place(place_name, network_type='drive', retain_all=True, simplify=True)
+
+    # Save the graph to a GraphML file
+    ox.save_graphml(graph, graph_name)
+
+    print("Graph downloaded")
+
+    return graph
+
+def check_negative_weight(G):
+    flag = True
+    for node1, node2, data in G.edges(data=True):
+        if data.get('length', 0) < 0:
+            print(f"Negative edge found between {node1} and {node2} with length {data['length']}")
+            flag = False
+    
+    if flag:
+        print("[+]No negative weight in edges :D")
+    
 
 # Function to find the nearest node in the graph to a given coordinate
 def get_nearest_node(graph, point):
@@ -37,7 +70,11 @@ def fetch_traffic_flow_data(api_key):
     if response.status_code == 200:
         try:
             traffic_data = response.json()
-            return traffic_data
+            # Randomly select some of the traffic data entries to simulate partial live traffic flow data
+            total_segments = len(traffic_data['value'])
+            selected_indices = random.sample(range(total_segments), total_segments // 10)
+            selected_traffic_data = [traffic_data['value'][i] for i in selected_indices]
+            return selected_traffic_data
         except requests.exceptions.JSONDecodeError as e:
             print(f"JSON decode error: {e}")
             print(f"Response content: {response.content}")
@@ -52,8 +89,11 @@ def update_edge_weights(graph, traffic_data):
     """
     Done by: Chin Leong
     """
-    for segment in traffic_data.get('value', []):
+    total_start_time = time.time()
+    
+    for segment in traffic_data:
         try:
+            
             start_lat = float(segment['StartLat'])
             start_lon = float(segment['StartLon'])
             end_lat = float(segment['EndLat'])
@@ -65,15 +105,21 @@ def update_edge_weights(graph, traffic_data):
             start_node = get_nearest_node(graph, start_coords)
             end_node = get_nearest_node(graph, end_coords)
             speed_band = float(segment['SpeedBand'])
-            # print("Speed band is:")
-            # print(segment['SpeedBand'])
+          
             if start_node in graph and end_node in graph[start_node]:
                 length = graph[start_node][end_node][0]['length'] / 1000  # Convert to km
                 travel_time = length / speed_band  # Time in hours
                 graph[start_node][end_node][0]['travel_time'] = travel_time * 60  # Convert to minutes
                 graph[start_node][end_node][0]['speed_band'] = speed_band  # Store speed band for coloring
+                
+                 # Debug output
+                print(f"Updated edge ({start_node}, {end_node}) with travel time: {travel_time * 60:.2f} mins, speed band: {speed_band}")
         except KeyError as e:
             print(f"Key error: {e} in segment {segment}")
+            
+    total_end_time = time.time()
+    total_duration = total_end_time - total_start_time
+    print (f"Total time taken to update edge weights: {total_duration:.2f} seconds")
 
 # Function to simulate high traffic
 def simulate_high_traffic(graph, start_coords, end_coords):
@@ -194,7 +240,6 @@ def match_nodes_in_traffic_incident(G, path):
     """
     Done by: Weijing
     """
-    
     nodes_to_avoid=[]
     filename = 'traffic_incident.xlsx'
     df = pd.read_excel(filename)
@@ -234,7 +279,9 @@ def index():
     This will lead to form.html
     This function will clear the session to drop previous data to prevent overlapping
     """
-    print(G)
+    #check for negative weight in edges
+    check_negative_weight(G)
+    print("[+]",G)
     print("[*]Clearing sessions...")
     session.clear()
     print("[+]Sessions cleared successfully :D")
@@ -294,6 +341,12 @@ def compute_routes(sorted_ids, order):
     global total_distance_travelled
     global total_time_taken
     global entire_route_segments
+    
+    # Fetch and update real-time traffic data
+    api_key = 'o2oSSMCJSUOkZQxWvyAjsA=='  # Replace with your actual LTA API key
+    traffic_data = fetch_traffic_flow_data(api_key)
+    if traffic_data:
+        update_edge_weights(G, traffic_data)
     
     precomputed_routes = []
     nodecount_segment_astar = []
@@ -476,8 +529,6 @@ def plot_entire_route():
     global total_time_taken
 
     start_coords = session.get('lcoords0')
-    #destination_coords = [session.get(f'lcoords{data+1}') for data in range(counter+1)]
-    #destination_coords.pop()  # Just a quick fix
 
     #get destionation_coords on the sorted Id
     sorted_ids_copy = session.get('sorted_ids')
@@ -528,6 +579,7 @@ def simulate_traffic():
     # Avoid nodes will be based on REAL TIME DATA FROM LTA
     avoid_nodes = set()
     
+    avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
     print("Initial avoid nodes:", avoid_nodes)
 
     #Remove destionation node from avoid_nodes if found in here
@@ -545,6 +597,7 @@ def simulate_traffic():
         add_random_node_to_traffic_incident(random_node)
     
     avoid_nodes.update(match_nodes_in_traffic_incident(G, original_segment))
+    print("After random input into excel. Avoid nodes:", avoid_nodes)
 
     
     #if there are things in avoid_nodes
